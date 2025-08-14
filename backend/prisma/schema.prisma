@@ -1,0 +1,268 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../src/generated/prisma/client"  
+  // output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+  DELIVERY
+}
+
+model User {
+  id              String   @id @default(cuid())
+  full_name       String
+  email           String   @unique
+  phone           String   @unique
+  password_hashed String
+  role            Role     @default(CUSTOMER)
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  carts               Carts[]
+  orders              Orders[]
+  addresses           Address[]
+  deliveries_assigned Delivery[]               @relation("DeliveryPartner")
+  inventory_logs      inventory_transactions[] @relation("InventoryCreatedBy")
+  shipping_addresses  Shipping_address[]
+}
+
+model Categories {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  // Relations
+  products Products[]
+}
+
+enum CartStatus {
+  ACTIVE
+  CONVERTED
+  ABANDONED
+}
+
+model Carts {
+  id         String     @id @default(cuid())
+  userId     String
+  status     CartStatus @default(ACTIVE)
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+
+  // Relations
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items Cart_Items[]
+
+  @@index([userId])
+}
+
+model Products {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  price       Float
+  stock       Int
+  categoryId  String
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  category   Categories               @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  imagesURL  Product_Images[]
+  cartItems  Cart_Items[]
+  orderItems order_items[]
+  inventory  inventory_transactions[]
+
+  @@index([categoryId])
+  @@index([name])
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum payment_status {
+  UNPAID
+  PAID
+  FAILED
+}
+
+model Shipping_Amount {
+  id              String @id @default(cuid())
+  orderId         String @unique
+  subtotal_amount Float
+  shipping_amount Float
+  discount_amount Float
+  total_amount    Float
+
+  // Relations
+  order Orders @relation("OrderToShippingAmount", fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Shipping_address {
+  id           String  @id @default(cuid())
+  userId       String
+  ship_name    String
+  ship_phone   String
+  ship_address String
+  ship_city    String
+  ship_state   String
+  ship_zip     String
+  notes        String?
+
+  // Relations
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Orders[]
+
+  @@index([userId])
+}
+
+model Orders {
+  id                  String         @id @default(cuid())
+  userId              String
+  status              OrderStatus    @default(PENDING)
+  payment_status      payment_status @default(UNPAID)
+  shipping_address_id String
+  placed_at           DateTime       @default(now())
+  updated_at          DateTime       @updatedAt
+
+  // Relations
+  user             User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  shipping_address Shipping_address @relation(fields: [shipping_address_id], references: [id], onDelete: Restrict)
+  shipping_amount  Shipping_Amount? @relation("OrderToShippingAmount")
+  items            order_items[]
+  delivery         Delivery?
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Address {
+  id             String  @id @default(cuid())
+  userId         String
+  label          String
+  recipient_name String
+  phone          String
+  address        String
+  city           String
+  state          String
+  postal_code    String
+  country        String
+  is_default     Boolean @default(false)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Cart_Items {
+  id           String   @id @default(cuid())
+  cartId       String
+  productId    String
+  product_name String
+  quantity     Int
+  unit_price   Float
+  total_price  Float
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  cart    Carts    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Products @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+}
+
+model Product_Images {
+  id         String   @id @default(cuid())
+  product_id String
+  image_url  String
+  sort_order Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  product Products @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@index([product_id])
+}
+
+model inventory_transactions {
+  id         String   @id @default(cuid())
+  product_id String
+  delta      Int
+  reason     String
+  created_by String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  product Products @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  creator User     @relation("InventoryCreatedBy", fields: [created_by], references: [id], onDelete: Restrict)
+
+  @@index([product_id])
+  @@index([created_by])
+}
+
+model order_items {
+  id           String   @id @default(cuid())
+  order_id     String
+  product_id   String
+  product_name String
+  unit_price   Float
+  quantity     Int
+  line_total   Float
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  order   Orders   @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product Products @relation(fields: [product_id], references: [id], onDelete: Restrict)
+
+  @@index([order_id])
+}
+
+enum DeliveryStatus {
+  UNASSIGNED
+  ASSIGNED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  FAILED
+}
+
+model Delivery {
+  id                  String         @id @default(cuid())
+  order_id            String         @unique
+  delivery_partner_id String
+  status              DeliveryStatus @default(UNASSIGNED)
+  assigned_at         DateTime       @default(now())
+  last_update_at      DateTime       @updatedAt
+  notes               String?
+
+  // Relations
+  order            Orders @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  delivery_partner User   @relation("DeliveryPartner", fields: [delivery_partner_id], references: [id], onDelete: Restrict)
+
+  @@index([delivery_partner_id])
+}
