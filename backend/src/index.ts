@@ -1,30 +1,21 @@
 import { PrismaClient } from "@prisma/client";
 import dotenv from "dotenv";
-import express from "express";
-import cors from "cors";
-import cookieParser from "cookie-parser";
+import { app as importedApp } from "./app.js";
 import { PORT } from "./constant.js";
 
 dotenv.config();
-const app = express();
+const app = importedApp;
 
-const corsOptions = {
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-};
+export const prisma = new PrismaClient();
 
-app.use(cors(corsOptions));
-app.use(express.json());
-app.use(cookieParser());
+app.get("/", (_, res) => {
+  res.send("Hello World!");
+});
 
-export const prisma = new PrismaClient()
-
-app.get("/", (req, res) => {
-    res.send("Hello World!");
+app.get("/health", (_, res) => {
+  res.status(200).json({ message: "Server is healthy" });
 });
 
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
 });

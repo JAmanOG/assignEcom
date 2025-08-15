@@ -45,17 +45,17 @@ export const hashPassword = async (password: string): Promise<string> => {
   }
 };
 
-export const allFieldRequired = (fields: { [key: string]: any }): boolean => {
-  const missingFields = Object.entries(fields)
-    .filter(([_, value]) => value === undefined || value === null || value === "")
-    .map(([key, _]) => key);
+export const allFieldRequired = (fields: Record<string, any>): boolean => {
+  const missing = Object.entries(fields)
+    .filter(([_, v]) => v === undefined || v === null || v === "")
+    .map(([k]) => k);
+  return missing.length === 0;
+};
 
-  if (missingFields.length > 0) {
-    throw new Error(`Missing required fields: ${missingFields.join(", ")}`);
-  }
+export const allArrayRequired = (values: any[]): boolean => {
+  return values.every(v => v !== undefined && v !== null && v !== "");
+};
 
-  return true;
-}
 
 export const ORFieldRequired = (fields: { [key: string]: any }): boolean => {
   const filledFields = Object.entries(fields)

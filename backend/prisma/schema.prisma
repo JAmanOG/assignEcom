@@ -27,6 +27,7 @@ model User {
   email           String   @unique
   phone           String   @unique
   password_hashed String
+  storedRefreshToken String?
   role            Role     @default(CUSTOMER)
   is_active       Boolean  @default(true)
   created_at      DateTime @default(now())

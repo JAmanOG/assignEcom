@@ -32,3 +32,9 @@ export type ProductResult = {
   page?: number;
   limit?: number;
 };
+
+export type OrderStatus =   "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+
+export type Role =   "ADMIN" | "CUSTOMER" | "DELIVERY"
+
+export type DeliveryStatus = "UNASSIGNED" | "ASSIGNED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "FAILED";

@@ -1,5 +1,4 @@
 import { prisma } from "../index.js";
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -8,10 +7,10 @@ import {
   generateRefreshToken,
   hashPassword,
   isPasswordValid,
-  allFieldRequired,
-  ORFieldRequired,
+  allFieldRequired
 } from "../helper/helper.js";
 import type { Request, Response } from "express";
+import type { Role } from "../types/type.js";
 
 // registering a new user
 const registerUser = async (req: Request, res: Response) => {
@@ -54,9 +53,17 @@ const registerUser = async (req: Request, res: Response) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
+    // setting the access token
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000 // 15 minutes
+    });
+
+
     return res.status(201).json({
       message: "User registered successfully",
-      accessToken,
       user: {
         id: newUser.id,
         full_name: newUser.full_name,
@@ -71,6 +78,53 @@ const registerUser = async (req: Request, res: Response) => {
   }
 };
 
+// Rotate Refresh Token
+const rotateRefreshToken = async (req: Request, res: Response) => {
+  const { refreshToken } = req.cookies;
+  if (!refreshToken) {
+    return res.status(401).json({ message: "No refresh token provided" });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as string) as { id: string };
+    const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+
+    if (!user || user.storedRefreshToken !== refreshToken) {
+      // Compare against stored token in DB
+      return res.status(401).json({ message: "Invalid refresh token" });
+    }
+
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+
+    // Store new refresh token in DB
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { storedRefreshToken: newRefreshToken }
+    });
+
+    res.cookie("refreshToken", newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.cookie("accessToken", newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000
+    });
+
+    return res.status(200).json({ message: "Tokens rotated successfully" });
+
+  } catch (error) {
+    console.error("Error rotating refresh token:", error);
+    return res.status(401).json({ message: "Invalid or expired refresh token" });
+  }
+};
+// Updating user details
 const updatingUser = async (req: Request, res: Response) => {
   const userId: string = req.user?.id || "";
   const { full_name, email, phone } = req.body;
@@ -155,12 +209,24 @@ const logoutUser = async (req: Request, res: Response) => {
   if (!refreshToken) {
     return res.status(401).json({ message: "No refresh token provided" });
   }
+
+  
+
   try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET as string) as { id: string };
+    await prisma.user.update({
+      where: { id: decoded.id },
+      data: { storedRefreshToken: null }
+    });
+
+    
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
     });
+
+    // TODO: have to invalidate the access token
     return res.status(200).json({ message: "Logout successful" });
   } catch (error) {
     console.error("Error logging out user:", error);
@@ -230,11 +296,55 @@ const changePassword = async (req: Request, res: Response) => {
     }
 }
 
+// list all the users
+const listUsers = async (req: Request, res: Response) => {
+  // with filter
+  const { role } = req.query;
+  if (role && typeof role !== "string") {
+    return res.status(400).json({ message: "Invalid role filter" });
+  }
+
+  try {
+    if (role) {
+      const users = await prisma.user.findMany({
+        where: { role : role as Role },
+        select: {
+          id: true,
+          full_name: true,
+          email: true,
+          phone: true,
+          role: true,
+        },
+      });
+
+      return res.status(200).json({ message: "Users fetched successfully", users });
+    }else {
+      const users = await prisma.user.findMany({
+        select: {
+          id: true,
+          full_name: true,
+          email: true,
+          phone: true,
+          role: true,
+        },
+      });
+
+      return res.status(200).json({ message: "Users fetched successfully", users });
+    }
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export {
   registerUser,
   loginUser,
   logoutUser,
   getCurrentUser,
   changePassword,
-  updatingUser
+  updatingUser,
+  listUsers,
+  rotateRefreshToken,
+  
 }
