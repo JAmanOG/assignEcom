@@ -2,7 +2,7 @@ import { Router } from "express";
 import type { RequestHandler } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { roleMiddleware } from "../middleware/role.middleware.js";
-import {createProduct,deleteProduct,getAllProducts,getProductDetails,updateProduct} from "../controller/products.controller.js";
+import {createProduct,deleteProduct,getAllProducts,getProductDetails,updateProduct,getProductByFilter} from "../controller/products.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
 const router = Router();
 
@@ -31,5 +31,6 @@ router.put("/:id", authMiddleware, roleMiddleware(["ADMIN"]), upload.fields([{
     maxCount: 5
 }]), updateProductHandler);
 router.delete("/:id", authMiddleware, roleMiddleware(["ADMIN"]), deleteProduct);
+router.get("/filter", getProductByFilter);
 
 export default router;

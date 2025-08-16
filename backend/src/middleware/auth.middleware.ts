@@ -7,7 +7,8 @@ export const authMiddleware = async (req: Request, res: Response, next: Function
     console.log("Request headers:", req.cookies);
     console.log('Authorization Header:', req.header("Authorization"));
 
-    const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
+    const token = req.cookies?.accessToken 
+    // || req.header("Authorization")?.replace("Bearer ", "");
     console.log("Token:", token);
 
     if (!token) {

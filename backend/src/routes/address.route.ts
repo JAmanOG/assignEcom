@@ -10,9 +10,9 @@ const router = Router();
 // PUT /api/address/:id - Update address (Customer only)
 // DELETE /api/address/:id - Delete address (Customer only)
 
-router.get("/", authMiddleware, getAddresses);
-router.post("/", authMiddleware, createAddress);
-router.put("/:id", authMiddleware, updateAddress);
-router.delete("/:id", authMiddleware, deleteAddress);
+router.get("/", authMiddleware,roleMiddleware(["CUSTOMER"]), getAddresses);
+router.post("/", authMiddleware,roleMiddleware(["CUSTOMER"]), createAddress);
+router.put("/:id", authMiddleware,roleMiddleware(["CUSTOMER"]), updateAddress);
+router.delete("/:id", authMiddleware,roleMiddleware(["CUSTOMER"]), deleteAddress);
 
 export default router;

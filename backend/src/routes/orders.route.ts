@@ -17,8 +17,8 @@ router.put("/admin/orders/:id/status", authMiddleware, roleMiddleware(["ADMIN"])
 router.put("/admin/orders/:id/assign", authMiddleware, roleMiddleware(["ADMIN"]), assignOrderToDelivery);
 router.delete("/admin/orders/:id", authMiddleware, roleMiddleware(["ADMIN"]), deleteOrder);
 
-router.get("/", authMiddleware, getUserOrders);
-router.post("/", authMiddleware, placeOrder);
-router.get("/:id", authMiddleware, getOrderDetails);
+router.get("/", authMiddleware, roleMiddleware(["CUSTOMER"]), getUserOrders);
+router.post("/", authMiddleware, roleMiddleware(["CUSTOMER"]), placeOrder);
+router.get("/:id", authMiddleware, roleMiddleware(["CUSTOMER"]), getOrderDetails);
 
 export default router;

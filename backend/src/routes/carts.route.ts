@@ -10,9 +10,9 @@ const router = Router();
 // PUT /api/cart/:itemId - Update cart item quantity 
 // DELETE /api/cart/:itemId - Remove item from cart
 
-router.get("/", authMiddleware, getUserCart);
-router.post("/add", authMiddleware, addItemToCart);
-router.put("/:itemId", authMiddleware, updateCartItemQuantity);
-router.delete("/:itemId", authMiddleware, removeItemFromCart);
+router.get("/", authMiddleware, roleMiddleware(['CUSTOMER']), getUserCart);
+router.post("/add", authMiddleware,roleMiddleware(['CUSTOMER']), addItemToCart);
+router.put("/:itemId", authMiddleware,roleMiddleware(['CUSTOMER']), updateCartItemQuantity);
+router.delete("/:itemId", authMiddleware,roleMiddleware(['CUSTOMER']), removeItemFromCart);
 
 export default router;

@@ -25,13 +25,13 @@ export type GetAllProductsParams = {
   sortOrder?: "asc" | "desc";
 };
 
-export type ProductResult = {
-  message: string;
-  products: any[];
-  totalProducts: number;
-  page?: number;
-  limit?: number;
-};
+// export type ProductResult = {
+//   message: string;
+//   products: any[];
+//   totalProducts: number;
+//   page?: number;
+//   limit?: number;
+// };
 
 export type OrderStatus =   "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
 

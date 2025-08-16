@@ -33,7 +33,6 @@ const registerUser = async (req: Request, res: Response) => {
     }
 
     const hashedPassword = await hashPassword(password);
-
     const newUser = await prisma.user.create({
       data: {
         id: uuidv4(),
@@ -44,8 +43,16 @@ const registerUser = async (req: Request, res: Response) => {
       },
     });
 
+
     const accessToken = generateAccessToken(newUser);
     const refreshToken = generateRefreshToken(newUser);
+
+    // Store refresh token in the database
+    await prisma.user.update({
+      where: { id: newUser.id },
+      data: { storedRefreshToken: refreshToken }
+    });
+
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -129,15 +136,30 @@ const updatingUser = async (req: Request, res: Response) => {
   const userId: string = req.user?.id || "";
   const { full_name, email, phone } = req.body;
 
-  const isValid = allFieldRequired({ full_name, email, phone });
-  if (!isValid) {
-    return res.status(400).json({ message: "All fields are required" });
-  }
-
   try {
+    // If email is provided, check uniqueness
+    if (email) {
+      const emailExists = await prisma.user.findFirst({
+        where: { email, NOT: { id: userId } },
+      });
+      if (emailExists) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+    }
+
+    // Build update object dynamically
+    const data: any = {};
+    if (full_name) data.full_name = full_name;
+    if (email) data.email = email;
+    if (phone) data.phone = phone;
+
+    if (Object.keys(data).length === 0) {
+      return res.status(400).json({ message: "No valid fields to update" });
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { full_name, email, phone },
+      data,
     });
 
     return res.status(200).json({
@@ -154,7 +176,7 @@ const updatingUser = async (req: Request, res: Response) => {
     console.error("Error updating user:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-}
+};
 
 // logging in the user
 const loginUser = async (req: Request, res: Response) => {
@@ -178,12 +200,26 @@ const loginUser = async (req: Request, res: Response) => {
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
+    // Store refresh token in the database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { storedRefreshToken: refreshToken }
+    });
+
     // setting the refresh token in the client's cookies
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    // setting the access token in the client's cookies
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000 // 15 minutes
     });
 
     return res.status(200).json({

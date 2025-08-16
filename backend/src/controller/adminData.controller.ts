@@ -13,6 +13,7 @@ const getTotalNoOfOrders = async (req: Request, res: Response) => {
   }
 };
 
+// total orders by status
 const getTotalNoOfOrdersByStatus = async (req: Request, res: Response) => {
   const { status } = req.query;
   if (!status) {

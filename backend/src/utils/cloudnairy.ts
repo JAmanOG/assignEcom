@@ -25,15 +25,15 @@ const uploadFilePath = async (LocalFilePath: string) => {
   }
 };
 
-const DeleteOldImage = async (FieldName: string) => {
-  await cloudinary.uploader.destroy(FieldName, (error, result) => {
-    if (error) {
-      console.log("Error deleting image", error);
-      return null;
-    }
-    console.log("Image deleted successfully");
+const DeleteOldImage = async (publicId: string) => {
+  try {
+    const result = await cloudinary.uploader.destroy(publicId);
+    console.log("Image deleted successfully:", result);
     return result;
-  });
+  } catch (error) {
+    console.error("Error deleting image:", error);
+    return null;
+  }
 };
 
 export { uploadFilePath, DeleteOldImage };

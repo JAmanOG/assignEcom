@@ -59,7 +59,7 @@ enum CartStatus {
 
 model Carts {
   id         String     @id @default(cuid())
-  userId     String
+  userId     String     @unique
   status     CartStatus @default(ACTIVE)
   created_at DateTime   @default(now())
   updated_at DateTime   @updatedAt

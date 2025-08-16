@@ -5,7 +5,8 @@ import jwt from "jsonwebtoken";
 export const roleMiddleware = (roles: string[]) => {
     return async (req: Request, res: Response, next: Function) => {
         console.log("Role middleware triggered");
-        const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
+        const token = req.cookies?.accessToken 
+        // || req.header("Authorization")?.replace("Bearer ", "");
         
         if (!token) {
             console.log("No token provided");

@@ -14,11 +14,11 @@ const addItemToCart = async (req: Request, res: Response) => {
   if (!product) return res.status(404).json({ message: "Product not found" });
 
   const cart = await prisma.carts.upsert({
-    where: { id: userId as string },
-    create: { userId, items: { create: [] }  } as any,
+    where: { userId: userId as string},
+    create: { userId, items: { create: [] } } as any,
     update: {},
   });
-
+  
   const existing = await prisma.cart_Items.findUnique({
     where: { cartId_productId: { cartId: cart.id, productId } },
   });
@@ -79,7 +79,7 @@ const getUserCart = async (req: Request, res: Response) => {
 // Remove item from cart
 const removeItemFromCart = async (req: Request, res: Response) => {
   const userId = req.user?.id;
-  const { itemId } = req.body;
+  const { itemId } = req.params;
   // Validate required fields
   const isAllfieldExist = allFieldRequired({ userId, itemId });
   if (!isAllfieldExist) {
@@ -88,9 +88,7 @@ const removeItemFromCart = async (req: Request, res: Response) => {
 
   try {
     // Check if cart item exists
-    const cartItemExists = await prisma.cart_Items.findUnique({
-      where: { id: itemId },
-    });
+    const cartItemExists = await prisma.cart_Items.findUnique({ where: { id: itemId as string } });
 
     if (!cartItemExists) {
       return res.status(404).json({ message: "Cart item not found" });
@@ -103,7 +101,7 @@ const removeItemFromCart = async (req: Request, res: Response) => {
 
     // Remove item from cart
     await prisma.cart_Items.delete({
-      where: { id: itemId },
+      where: { id: itemId as string},
     });
 
     return res
@@ -118,7 +116,8 @@ const removeItemFromCart = async (req: Request, res: Response) => {
 // Update cart item quantity
 const updateCartItemQuantity = async (req: Request, res: Response) => {
   const userId = req.user?.id;
-  const { itemId, quantity } = req.body;
+  const { itemId } = req.params;
+  const { quantity } = req.body;
 
   // Validate required fields
   const isAllfieldExist = allFieldRequired({ userId, itemId, quantity });
@@ -129,7 +128,7 @@ const updateCartItemQuantity = async (req: Request, res: Response) => {
   try {
     // Check if cart item exists
     const cartItemExists = await prisma.cart_Items.findUnique({
-      where: { id: itemId },
+      where: { id: itemId as string },
     });
 
     if (!cartItemExists) {
@@ -138,7 +137,7 @@ const updateCartItemQuantity = async (req: Request, res: Response) => {
 
     // Update cart item quantity
     const updatedCartItem = await prisma.cart_Items.update({
-      where: { id: itemId },
+      where: { id: itemId as string },
       data: { quantity, total_price: cartItemExists.unit_price * quantity },
     });
 

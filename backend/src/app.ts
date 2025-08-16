@@ -29,7 +29,7 @@ import adminDataRoutes from "./routes/adminData.route.js";
 
 // Use routes
 app.use("/api/auth", userRoutes);
-app.use("/api/shop/products", productRoutes);
+app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/cart", cartRoutes);

@@ -83,7 +83,7 @@ const placeOrder = async (req: Request, res: Response) => {
       if (product.stock < item.quantity) {
         throw new Error(`Insufficient stock for product: ${product.name}`);
       }
-      
+
       const line_total = product.price * item.quantity;
       subtotal += line_total;
       return {
@@ -140,6 +140,7 @@ const placeOrder = async (req: Request, res: Response) => {
 // Get user's orders (Customer only)
 const getUserOrders = async (req: Request, res: Response) => {
   const userId = req.user?.id;
+  const { page = "1", limit = "10", status } = req.query;
 
   // Validate userId
   if (!userId) {
@@ -155,14 +156,26 @@ const getUserOrders = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Pagination params
+    const pageNum = parseInt(page as string, 10);
+    const pageSize = parseInt(limit as string, 10);
+    const skip = (pageNum - 1) * pageSize;
+    const take = pageSize;
+
+    const where: any = { userId };
+    if (status) where.status = status;
+
     // Fetch orders for the user
     const orders = await prisma.orders.findMany({
-      where: { userId },
+      where,
       include: {
         items: true,
         shipping_address: true,
         delivery: true,
       },
+      skip,
+      take,
+      orderBy: { placed_at: "desc" },
     });
 
     if (orders.length === 0) {

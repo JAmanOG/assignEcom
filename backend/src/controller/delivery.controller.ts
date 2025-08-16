@@ -1,7 +1,7 @@
 import { prisma } from "../index.js";
 import type { Request, Response } from "express";
-import type { Role } from "../types/type.js";
-
+import type { OrderStatus, Role } from "../types/type.js";
+import { allowedTransitions, deliveryToOrderStatusMap } from "../constant.js";
 // Get assigned deliveries
 const getAssignedDeliveries = async (req: Request, res: Response) => {
     const deliveryPartnerId = req.user?.id;
@@ -22,7 +22,7 @@ const getAssignedDeliveries = async (req: Request, res: Response) => {
         }
         
         const deliveries = await prisma.delivery.findMany({
-            where: { delivery_partner_id: deliveryPartnerId, status: "ASSIGNED" },
+            where: { delivery_partner_id: deliveryPartnerId, status: { in: ["ASSIGNED", "OUT_FOR_DELIVERY"] } },
             include: {
                 order: {
                     include: {
@@ -68,6 +68,18 @@ const updateDeliveryStatus = async (req: Request, res: Response) => {
             return res.status(404).json({ message: "Delivery not found" });
         }
 
+        if (deliveryExists.delivery_partner_id !== req.user?.id) {
+            return res.status(403).json({ message: "You are not authorized to update this delivery" });
+          }          
+
+        const currentStatus = deliveryExists.status;
+
+        const transitions = allowedTransitions[currentStatus as keyof typeof allowedTransitions] || [];
+        if (!transitions.includes(status)) {
+            return res.status(400).json({ message: `Invalid status transition from ${currentStatus} to ${status}` });
+        }
+          
+
         // Update delivery status
         const updatedDelivery = await prisma.delivery.update({
             where: { id: deliveryId },
@@ -77,7 +89,15 @@ const updateDeliveryStatus = async (req: Request, res: Response) => {
         if (!updatedDelivery) {
             return res.status(404).json({ message: "Delivery not found" });
         }
-
+        if (updatedDelivery.order_id) {
+            const newOrderStatus = deliveryToOrderStatusMap[status];
+            if (newOrderStatus) {
+                await prisma.orders.update({
+                    where: { id: updatedDelivery.order_id },
+                    data: { status: newOrderStatus as OrderStatus },
+                });
+            }
+        }        
         return res.status(200).json({ message: "Delivery status updated successfully", delivery: updatedDelivery });
     } catch (error) {
         console.error("Error updating delivery status:", error);

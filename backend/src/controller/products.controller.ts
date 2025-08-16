@@ -1,11 +1,9 @@
 import { prisma } from "../index.js";
 import { v4 as uuidv4 } from "uuid";
 import type { Request, Response } from "express";
-import type {  ProductResult } from "../types/type.js";
+// import type { ProductResult } from "../types/type.js";
 import { uploadFilePath, DeleteOldImage } from "../utils/cloudnairy.js";
-import {
-  adjustStock
-} from "./inventory_transactions.controller.js";
+import { adjustStock } from "./inventory_transactions.controller.js";
 
 const toNumber = (v: any) =>
   v === "" || v === null || v === undefined ? NaN : Number(v);
@@ -24,7 +22,6 @@ const createProduct = async (req: MulterRequest, res: Response) => {
   if (stockNum < 0) {
     return res.status(400).json({ error: "Stock cannot be negative" });
   }
-  
 
   if (!name || !description || !price || !stock || !categoryId) {
     return res.status(400).json({ error: "All fields are required" });
@@ -51,7 +48,6 @@ const createProduct = async (req: MulterRequest, res: Response) => {
       }
     }
     await prisma.$transaction(async (tx) => {
-
       const newProduct = await tx.products.create({
         data: {
           id: uuidv4(),
@@ -70,7 +66,13 @@ const createProduct = async (req: MulterRequest, res: Response) => {
         include: { imagesURL: true, category: true },
       });
 
-      await adjustStock(newProduct.id, stockNum, "Initial stock", userId,tx as typeof prisma);
+      await adjustStock(
+        newProduct.id,
+        stockNum,
+        "Initial stock",
+        userId,
+        tx as typeof prisma
+      );
 
       return res.status(201).json({
         message: "Product created successfully",
@@ -84,10 +86,7 @@ const createProduct = async (req: MulterRequest, res: Response) => {
 };
 
 // Get all products with optional filters, pagination, and sorting
-const getAllProducts = async (
-  req: Request,
-  _res: Response
-): Promise<ProductResult> => {
+const getAllProducts = async (req: Request, _res: Response) => {
   try {
     const {
       page = 1,
@@ -187,6 +186,68 @@ const getAllProducts = async (
   }
 };
 
+// get product by filter
+const getProductByFilter = async (req: Request, res: Response) => {
+  const {
+    categoryId,
+    minPrice,
+    maxPrice,
+    search,
+    inStock,
+    page = "1",
+    limit = "10",
+  } = req.query;
+
+  try {
+    const where: any = {};
+
+    // Category filter
+    if (categoryId) {
+      where.categoryId = categoryId;
+    }
+
+    // Price filter
+    if (minPrice || maxPrice) {
+      where.price = {};
+      if (minPrice) where.price.gte = parseFloat(minPrice as string);
+      if (maxPrice) where.price.lte = parseFloat(maxPrice as string);
+    }
+
+    // Stock filter
+    if (inStock === "true") {
+      where.stock = { gt: 0 }; // only products with stock > 0
+    }
+
+    // Search filter
+    if (search) {
+      where.name = { contains: search as string, mode: "insensitive" };
+    }
+
+    // Pagination
+    const pageNum = parseInt(page as string, 10);
+    const pageSize = parseInt(limit as string, 10);
+    const skip = (pageNum - 1) * pageSize;
+    const take = pageSize;
+
+    const products = await prisma.products.findMany({
+      where,
+      include: { imagesURL: true, category: true },
+      skip,
+      take,
+    });
+
+    return res.status(200).json({
+      message: "Products fetched successfully",
+      products,
+      page: pageNum,
+      limit: pageSize,
+    });
+  } catch (error) {
+    console.error("Error fetching products by filter:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 // Update product details by id
 const updateProduct = async (req: MulterRequest, res: Response) => {
   const userId = req.user?.id || "system";
@@ -277,13 +338,15 @@ const updateProduct = async (req: MulterRequest, res: Response) => {
           include: { imagesURL: true, category: true },
         });
 
-        if (!finalProduct) {
+        if (!finalProduct)
           return res.status(404).json({ error: "Product not found" });
-        }
+
+        const newStock = parseInt(stock, 10);
+        const delta = newStock - finalProduct.stock; // <- compute delta
 
         await adjustStock(
           finalProduct.id,
-          parseInt(stock, 10),
+          delta,
           "Stock updated",
           userId,
           tx as typeof prisma
@@ -406,4 +469,5 @@ export {
   updateProduct,
   deleteProduct,
   getProductDetails,
+  getProductByFilter,
 };
