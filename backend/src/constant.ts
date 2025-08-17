@@ -1,6 +1,8 @@
-export const PORT = process.env.PORT || 3000;
-export const JWT_SECRET = process.env.JWT_SECRET || "default_secret";
-export const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "default_refresh_secret";
+import { Env } from "./config.js";
+
+export const PORT = Env.PORT || 3000;
+export const JWT_SECRET = process.env.JWT_SECRET;
+export const JWT_REFRESH_SECRET = Env.JWT_REFRESH_SECRET || "default_refresh_secret";
 export const deliveryToOrderStatusMap: Record<string, string> = {
     UNASSIGNED: "PENDING",
     ASSIGNED: "PROCESSING",

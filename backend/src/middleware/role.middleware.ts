@@ -1,12 +1,12 @@
-import { prisma } from "../index.js";
+import { prisma } from "../prismaClient.js";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "../constant.js";
 
 export const roleMiddleware = (roles: string[]) => {
     return async (req: Request, res: Response, next: Function) => {
         console.log("Role middleware triggered");
-        const token = req.cookies?.accessToken 
-        // || req.header("Authorization")?.replace("Bearer ", "");
+        const token = req.cookies?.accessToken  || req.header("Authorization")?.replace("Bearer ", "");
         
         if (!token) {
             console.log("No token provided");
@@ -14,7 +14,7 @@ export const roleMiddleware = (roles: string[]) => {
         }
 
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string, role: string };
+            const decoded = jwt.verify(token, JWT_SECRET as string) as { id: string, role: string };
             console.log("Decoded token:", decoded);
             
             // Check if user exists

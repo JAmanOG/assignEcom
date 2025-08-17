@@ -1,21 +1,32 @@
-import { PrismaClient } from "@prisma/client";
 import dotenv from "dotenv";
-import { app as importedApp } from "./app.js";
+import { app } from "./app.js";
 import { PORT } from "./constant.js";
+import swaggerJsdoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
 
 dotenv.config();
-const app = importedApp;
 
-export const prisma = new PrismaClient();
+const swaggerOptions = {
+  definition: {
+    openapi: "3.0.3",
+    info: {
+      title: "E-Commerce API",
+      version: "1.0.0",
+      description: "Comprehensive API documentation for the E-Commerce platform.",
+    },
+    servers: [
+      { url: "http://localhost:3000", description: "Local" },
+    ],
+    components: { }, // central components moved to docs/openapi.ts
+  },
+  apis: ["./src/routes/*.ts", "./src/docs/*.ts"],
+};
 
-app.get("/", (_, res) => {
-  res.send("Hello World!");
-});
+const specs = swaggerJsdoc(swaggerOptions);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 
-app.get("/health", (_, res) => {
-  res.status(200).json({ message: "Server is healthy" });
-});
+app.get("/", (_req, res) => res.send("Hello World!"));
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+app.get("/health", (_req, res) => res.status(200).json({ message: "Server is healthy" }));
+
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

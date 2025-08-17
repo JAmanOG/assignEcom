@@ -1,4 +1,4 @@
-import { prisma } from "../index.js";
+import { prisma } from "../prismaClient.js";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -7,10 +7,11 @@ import {
   generateRefreshToken,
   hashPassword,
   isPasswordValid,
-  allFieldRequired
+  allFieldRequired,
 } from "../helper/helper.js";
 import type { Request, Response } from "express";
 import type { Role } from "../types/type.js";
+import { Env } from "../config.js";
 
 // registering a new user
 const registerUser = async (req: Request, res: Response) => {
@@ -43,31 +44,31 @@ const registerUser = async (req: Request, res: Response) => {
       },
     });
 
-
     const accessToken = generateAccessToken(newUser);
     const refreshToken = generateRefreshToken(newUser);
 
     // Store refresh token in the database
     await prisma.user.update({
       where: { id: newUser.id },
-      data: { storedRefreshToken: refreshToken }
+      data: { storedRefreshToken: refreshToken },
     });
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: Env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     // setting the access token
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 15 * 60 * 1000 // 15 minutes
+      secure: Env.NODE_ENV === "production",
+      sameSite: "lax", // changed from "strict"
+      path: "/",
+      maxAge: 15 * 60 * 1000, // 15 minutes
     });
-
 
     return res.status(201).json({
       message: "User registered successfully",
@@ -93,7 +94,10 @@ const rotateRefreshToken = async (req: Request, res: Response) => {
   }
 
   try {
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as string) as { id: string };
+    const decoded = jwt.verify(
+      refreshToken,
+      Env.JWT_REFRESH_SECRET as string
+    ) as { id: string };
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
 
     if (!user || user.storedRefreshToken !== refreshToken) {
@@ -107,28 +111,29 @@ const rotateRefreshToken = async (req: Request, res: Response) => {
     // Store new refresh token in DB
     await prisma.user.update({
       where: { id: user.id },
-      data: { storedRefreshToken: newRefreshToken }
+      data: { storedRefreshToken: newRefreshToken },
     });
 
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: Env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.cookie("accessToken", newAccessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: Env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 15 * 60 * 1000
+      maxAge: 60 * 60 * 1000,
     });
 
     return res.status(200).json({ message: "Tokens rotated successfully" });
-
   } catch (error) {
     console.error("Error rotating refresh token:", error);
-    return res.status(401).json({ message: "Invalid or expired refresh token" });
+    return res
+      .status(401)
+      .json({ message: "Invalid or expired refresh token" });
   }
 };
 // Updating user details
@@ -203,28 +208,31 @@ const loginUser = async (req: Request, res: Response) => {
     // Store refresh token in the database
     await prisma.user.update({
       where: { id: user.id },
-      data: { storedRefreshToken: refreshToken }
+      data: { storedRefreshToken: refreshToken },
     });
 
     // setting the refresh token in the client's cookies
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: Env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     // setting the access token in the client's cookies
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 15 * 60 * 1000 // 15 minutes
+      secure: Env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+
+      maxAge: 60 * 60 * 1000, // 1 hour
     });
 
     return res.status(200).json({
       message: "Login successful",
-      accessToken,
       user: {
         id: user.id,
         full_name: user.full_name,
@@ -246,19 +254,18 @@ const logoutUser = async (req: Request, res: Response) => {
     return res.status(401).json({ message: "No refresh token provided" });
   }
 
-  
-
   try {
-    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET as string) as { id: string };
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as string) as {
+      id: string;
+    };
     await prisma.user.update({
       where: { id: decoded.id },
-      data: { storedRefreshToken: null }
+      data: { storedRefreshToken: null },
     });
 
-    
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: Env.NODE_ENV === "production",
       sameSite: "strict",
     });
 
@@ -286,6 +293,20 @@ const getCurrentUser = async (req: Request, res: Response) => {
         email: true,
         phone: true,
         role: true,
+        addresses: {
+          select: {
+            id: true,
+            label: true,
+            recipient_name: true,
+            phone: true,
+            address: true,
+            city: true,
+            state: true,
+            postal_code: true,
+            country: true,
+            is_default: true,
+          },
+        },
       },
     });
 
@@ -300,37 +321,37 @@ const getCurrentUser = async (req: Request, res: Response) => {
   }
 };
 
-// changing the password 
+// changing the password
 const changePassword = async (req: Request, res: Response) => {
-    const userId: string = req.user?.id || "";
-    const { oldPassword, newPassword } = req.body;
-    
-    const isValid = allFieldRequired({ userId, oldPassword, newPassword });    
-    if (!isValid) {
-        return res.status(400).json({ message: "All fields are required" });
+  const userId: string = req.user?.id || "";
+  const { oldPassword, newPassword } = req.body;
+
+  const isValid = allFieldRequired({ userId, oldPassword, newPassword });
+  if (!isValid) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user || !(await comparePasswords(oldPassword, user.password_hashed))) {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
-    
-    try {
-        const user = await prisma.user.findUnique({
-        where: { id: userId },
-        });
-    
-        if (!user || !(await comparePasswords(oldPassword, user.password_hashed))) {
-        return res.status(401).json({ message: "Invalid credentials" });
-        }
-    
-        const hashedNewPassword = await hashPassword(newPassword);
-        await prisma.user.update({
-        where: { id: userId },
-        data: { password_hashed: hashedNewPassword },
-        });
-        
-        return res.status(200).json({ message: "Password changed successfully" });
-    } catch (error) {
-        console.error("Error changing password:", error);
-        return res.status(500).json({ message: "Internal server error" });
-    }
-}
+
+    const hashedNewPassword = await hashPassword(newPassword);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password_hashed: hashedNewPassword },
+    });
+
+    return res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error("Error changing password:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 // list all the users
 const listUsers = async (req: Request, res: Response) => {
@@ -343,18 +364,26 @@ const listUsers = async (req: Request, res: Response) => {
   try {
     if (role) {
       const users = await prisma.user.findMany({
-        where: { role : role as Role },
+        where: { role: role as Role },
         select: {
           id: true,
           full_name: true,
           email: true,
           phone: true,
           role: true,
+          is_active: true,
+          created_at: true,
+          updated_at: true,
+          addresses: true,
+          deliveries_assigned: true,
         },
+        
       });
 
-      return res.status(200).json({ message: "Users fetched successfully", users });
-    }else {
+      return res
+        .status(200)
+        .json({ message: "Users fetched successfully", users });
+    } else {
       const users = await prisma.user.findMany({
         select: {
           id: true,
@@ -362,16 +391,153 @@ const listUsers = async (req: Request, res: Response) => {
           email: true,
           phone: true,
           role: true,
+          is_active: true,
+          created_at: true,
+          updated_at: true,
+          orders: {
+            select: {
+              id: true,
+              items: {
+                select: {
+                  id: true,
+                  product_id: true,
+                  unit_price: true,
+                  quantity: true,
+                  line_total: true,
+                },
+              },
+              payment_status: true,
+              status: true,
+              placed_at: true,
+            },
+          },
         },
       });
 
-      return res.status(200).json({ message: "Users fetched successfully", users });
+      return res
+        .status(200)
+        .json({ message: "Users fetched successfully", users });
     }
   } catch (error) {
     console.error("Error fetching users:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+// Creating Admin User
+const createAdminUser = async (req: Request, res: Response) => {
+  const { full_name, email, phone, password } = req.body;
+
+  const isValid = allFieldRequired({ full_name, email, phone, password });
+  if (!isValid) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  try {
+    const isUserExists = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (isUserExists) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    const hashedPassword = await hashPassword(password);
+    const newAdminUser = await prisma.user.create({
+      data: {
+        id: uuidv4(),
+        full_name,
+        email,
+        phone,
+        password_hashed: hashedPassword,
+        role: "ADMIN",
+      },
+    });
+
+    return res.status(201).json({
+      message: "Admin user created successfully",
+      user: {
+        id: newAdminUser.id,
+        full_name: newAdminUser.full_name,
+        email: newAdminUser.email,
+        phone: newAdminUser.phone,
+        role: newAdminUser.role,
+      },
+    });
+  } catch (error) {
+    console.error("Error creating admin user:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// creating DELIVERY PARTNER
+const createDeliveryPartner = async (req: Request, res: Response) => {
+  const { full_name, email, phone, password } = req.body;
+  const isValid = allFieldRequired({ full_name, email, phone, password });
+  if (!isValid) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+  
+  try {
+    const isUserExists = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (isUserExists) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    const hashedPassword = await hashPassword(password);
+    const newDeliveryPartner = await prisma.user.create({
+      data: {
+        id: uuidv4(),
+        full_name,
+        email,
+        phone,
+        password_hashed: hashedPassword,
+        role: "DELIVERY",
+      },
+    });
+
+    const accessToken = generateAccessToken(newDeliveryPartner);
+    const refreshToken = generateRefreshToken(newDeliveryPartner);
+    
+    // Store refresh token in the database
+    await prisma.user.update({
+      where: { id: newDeliveryPartner.id },
+      data: { storedRefreshToken: refreshToken },
+    });
+    // setting the refresh token in the client's cookies
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: Env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // setting the access token in the client's cookies
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: Env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 1000, // 1 hour
+    });
+
+    return res.status(201).json({
+      message: "Delivery partner created successfully",
+      user: {
+        id: newDeliveryPartner.id,
+        full_name: newDeliveryPartner.full_name,
+        email: newDeliveryPartner.email,
+        phone: newDeliveryPartner.phone,
+        role: newDeliveryPartner.role,
+      },
+    });
+  } catch (error) {
+    console.error("Error creating delivery partner:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
 
 export {
   registerUser,
@@ -382,5 +548,6 @@ export {
   updatingUser,
   listUsers,
   rotateRefreshToken,
-  
-}
+  createAdminUser,
+  createDeliveryPartner
+};

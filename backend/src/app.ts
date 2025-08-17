@@ -1,17 +1,19 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import { Env } from "./config.js";
 
-export const app = express();
+const app = express();
 
 const corsOptions = {
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    origin: Env.CORS_ORIGIN || "http://localhost:5173",
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(cors(corsOptions));
+app.set("trust proxy", 1);
 app.use(express.json({ limit: "20kb" }));
 app.use(express.urlencoded({ extended: true, limit: "20kb" }));
 app.use(express.static("public"));
@@ -26,6 +28,7 @@ import orderRoutes from "./routes/orders.route.js";
 import cartRoutes from "./routes/carts.route.js";
 import deliveryRoutes from "./routes/delivery.route.js";
 import adminDataRoutes from "./routes/adminData.route.js";
+import addressRoutes from "./routes/address.route.js";
 
 // Use routes
 app.use("/api/auth", userRoutes);
@@ -35,5 +38,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/delivery", deliveryRoutes);
 app.use("/api/admin", adminDataRoutes);
+app.use("/api/address", addressRoutes);
 
 
+export { app };

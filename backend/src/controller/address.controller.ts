@@ -1,4 +1,4 @@
-import { prisma } from "../index.js";
+import { prisma } from "../prismaClient.js";
 import { allFieldRequired } from "../helper/helper.js";
 import type { Request, Response } from "express";
 
@@ -15,6 +15,8 @@ const createAddress = async (req: Request, res: Response) => {
     country,
     is_default,
   } = req.body;
+
+  console.log("Creating address for user:", userId);
 
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -58,11 +60,14 @@ const createAddress = async (req: Request, res: Response) => {
 
 const getAddresses = async (req: Request, res: Response) => {
   const userId = req.user?.id;
+  console.log("userId",userId)
   try {
     const addresses = await prisma.address.findMany({
-      where: { id: userId as string },
+      where: { userId: userId as string },
       orderBy: { is_default: "desc" },
     });
+
+    console.log("Fetched addresses for user:", userId, addresses);
     return res.status(200).json(addresses);
   } catch (error) {
     console.error("Error fetching addresses:", error);

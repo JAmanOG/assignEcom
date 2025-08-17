@@ -105,6 +105,7 @@ enum payment_status {
   UNPAID
   PAID
   FAILED
+  REFUNDED
 }
 
 model Shipping_Amount {

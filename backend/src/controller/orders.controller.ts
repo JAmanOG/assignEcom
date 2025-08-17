@@ -1,4 +1,4 @@
-import { prisma } from "../index.js";
+import { prisma } from "../prismaClient.js";
 import type { Request, Response } from "express";
 import type { OrderStatus } from "../types/type.js";
 import {
@@ -136,6 +136,128 @@ const placeOrder = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+// placing order through cart Id
+const placeOrderFromCart = async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  const cartId = req.params.cartId;
+  const { address_id, new_shipping_address } = req.body;
+
+  if (!cartId || (!address_id && !new_shipping_address)) {
+    return res.status(400).json({
+      message: "Cart ID and either address_id or new_shipping_address are required",
+    });
+  }
+
+  try {
+    // Fetch user's cart
+    const cart = await prisma.carts.findUnique({
+      where: { id: cartId, userId },
+      include: { items: true },
+    });
+
+    if (!cart || cart.items.length === 0) {
+      return res.status(404).json({ message: "Cart not found or empty" });
+    }
+
+    // Prepare order items & totals
+    let subtotal = 0;
+    const orderItemsData = cart.items.map((item) => {
+      subtotal += item.total_price;
+      return {
+        product_id: item.productId,
+        product_name: item.product_name,
+        unit_price: item.unit_price,
+        quantity: item.quantity,
+        line_total: item.total_price,
+      };
+    });
+
+    const shipping = 0; // Assuming no shipping cost for simplicity
+    const total = subtotal + shipping;
+
+    // Create shipping address
+    let shippingAddress;
+    if (new_shipping_address) {
+      shippingAddress = await prisma.shipping_address.create({
+        data: {
+          userId,
+          ship_name: new_shipping_address.recipient_name,
+          ship_phone: new_shipping_address.phone,
+          ship_address: new_shipping_address.address,
+          ship_city: new_shipping_address.city,
+          ship_state: new_shipping_address.state,
+          ship_zip: new_shipping_address.postal_code,
+          notes: new_shipping_address.notes || null,
+        },
+      });
+    } else {
+      const address = await prisma.address.findUnique({
+        where: { id: address_id },
+      });
+      if (!address || address.userId !== userId) {
+        return res.status(404).json({ message: "Address not found" });
+      }
+      shippingAddress = await prisma.shipping_address.create({
+        data: {
+          userId,
+          ship_name: address.recipient_name,
+          ship_phone: address.phone,
+          ship_address: address.address,
+          ship_city: address.city,
+          ship_state: address.state,
+          ship_zip: address.postal_code,
+          notes: null,
+
+        },
+      });
+    }
+    // Create the order
+    const order = await prisma.orders.create({
+      data: {
+        userId,
+        shipping_address_id: shippingAddress.id,
+        items: { create: orderItemsData },
+        shipping_amount: {
+          create: {
+            subtotal_amount: subtotal,
+            shipping_amount: shipping,
+            discount_amount: 0,
+            total_amount: total,
+          },
+        },
+      },
+      include: { items: true, shipping_address: true, shipping_amount: true },
+    });
+
+    // Adjust stock for each product
+    for (const item of orderItemsData) {
+      await adjustStock(
+        item.product_id,
+        -item.quantity,
+        `Order #${order.id} placed from cart`,
+        userId
+      );
+    }
+    
+    // Clear the cart after placing the order
+    await prisma.carts.update({
+      where: { id: cartId, userId },
+      data: { items: { deleteMany: {} } },
+    });
+
+    return res
+      .status(201)
+      .json({ message: "Order placed successfully from cart", order });
+  } catch (error) {
+    console.error("Error placing order from cart:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
 
 // Get user's orders (Customer only)
 const getUserOrders = async (req: Request, res: Response) => {
@@ -440,4 +562,5 @@ export {
   updateOrderStatus,
   assignOrderToDelivery,
   deleteOrder,
+  placeOrderFromCart
 };

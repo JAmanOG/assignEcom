@@ -1,14 +1,14 @@
-import { prisma } from "../index.js";
+import { prisma } from "../prismaClient.js";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "../constant.js";
 
 export const authMiddleware = async (req: Request, res: Response, next: Function) => {
     console.log("Auth middleware triggered");
     console.log("Request headers:", req.cookies);
     console.log('Authorization Header:', req.header("Authorization"));
 
-    const token = req.cookies?.accessToken 
-    // || req.header("Authorization")?.replace("Bearer ", "");
+    const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
     console.log("Token:", token);
 
     if (!token) {
@@ -16,7 +16,11 @@ export const authMiddleware = async (req: Request, res: Response, next: Function
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string };
+        const decodedUnverified = jwt.decode(token, { complete: true });
+        console.log("Unverified decoded token:", decodedUnverified);
+        
+        console.log("Verifying token...",JWT_SECRET);
+        const decoded = await jwt.verify(token, JWT_SECRET as string) as { id: string };
         console.log("Decoded token:", decoded);
         
         // Check if user exists

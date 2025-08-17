@@ -12,7 +12,7 @@ export const generateAccessToken = (user: User) => {
       role: user.role,
       phone: user.phone,
     },
-    JWT_SECRET,
+    JWT_SECRET as string,
     { expiresIn: "1h" }
   );
 };

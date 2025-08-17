@@ -5,6 +5,43 @@ import {getTotalNoOfOrders,getTotalNoOfOrdersByStatus,getTotalPendingDeliveriesB
 
 const router = Router();
 
+/**
+ * @openapi
+ * tags:
+ *   - name: Admin
+ *     description: Administrative analytics and metrics
+ * /api/admin/orders/total:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get total number of orders
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Total orders returned }
+ *       401: { description: Unauthorized }
+ *       403: { description: Forbidden }
+ * /api/admin/orders/total/status:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get total number of orders grouped by status
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Order counts by status }
+ * /api/admin/deliveries/total/status:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get total pending deliveries grouped by status
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Delivery counts by status }
+ * /api/admin/revenue/total:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get total revenue
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Total revenue returned }
+ */
+
 // GET /api/admin/orders/total - Get total number of orders (Admin only)
 // GET /api/admin/orders/total/status - Get total number of orders by status (Admin only)
 // GET /api/admin/deliveries/total/status - Get total pending deliveries by status

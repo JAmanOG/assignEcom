@@ -1,4 +1,4 @@
-import { prisma } from "../index.js";
+import { prisma } from "../prismaClient.js";
 import { v4 as uuidv4 } from "uuid";
 import type { Request, Response } from "express";
 // import type { ProductResult } from "../types/type.js";
@@ -19,6 +19,13 @@ const createProduct = async (req: MulterRequest, res: Response) => {
   const priceNum = Number(price);
   const stockNum = parseInt(stock, 10);
 
+  console.log("Creating product with data:", {
+    name,
+    description,
+    price: priceNum,
+    stock: stockNum,
+    categoryId,
+  });
   if (stockNum < 0) {
     return res.status(400).json({ error: "Stock cannot be negative" });
   }
@@ -32,21 +39,30 @@ const createProduct = async (req: MulterRequest, res: Response) => {
       where: { id: categoryId },
     });
     if (!category) {
+      console.log("Category not found for ID:", categoryId);
       return res.status(404).json({ error: "Category not found" });
     }
 
     const filesArray = req.files?.["imagesURL"];
+    console.log("Files array:", filesArray);
     if (!filesArray || filesArray.length === 0) {
+      console.log("No product images provided");
       return res.status(400).json({ error: "Product image is required" });
     }
 
     const uploadedUrls: string[] = [];
-    for (const file of filesArray) {
-      const uploaded = await uploadFilePath(file.path);
-      if (uploaded && typeof uploaded === "object" && "url" in uploaded) {
-        uploadedUrls.push((uploaded as any).url);
+    if (filesArray && filesArray.length > 0) {
+      for (const file of filesArray) {
+        const uploaded = await uploadFilePath(file.path);
+        if (uploaded && typeof uploaded === "object" && "url" in uploaded) {
+          uploadedUrls.push((uploaded as any).url);
+        } else {
+          return res.status(500).json({ error: "Failed to upload image" });
+        }
       }
     }
+
+    console.log("Uploaded image URLs:", uploadedUrls);
     await prisma.$transaction(async (tx) => {
       const newProduct = await tx.products.create({
         data: {
@@ -65,6 +81,8 @@ const createProduct = async (req: MulterRequest, res: Response) => {
         },
         include: { imagesURL: true, category: true },
       });
+
+      console.log("New product created:", newProduct);
 
       await adjustStock(
         newProduct.id,
@@ -86,7 +104,7 @@ const createProduct = async (req: MulterRequest, res: Response) => {
 };
 
 // Get all products with optional filters, pagination, and sorting
-const getAllProducts = async (req: Request, _res: Response) => {
+const getAllProducts = async (req: Request, res: Response) => {
   try {
     const {
       page = 1,
@@ -96,6 +114,15 @@ const getAllProducts = async (req: Request, _res: Response) => {
       sortOrder = "desc",
       id,
     } = req.query;
+
+    console.log("Fetching products with params:", {
+      page,
+      limit,
+      search,
+      sortBy,
+      sortOrder,
+      id,
+    });
 
     // Normalize / coerce query params
     const pageNum =
@@ -173,16 +200,16 @@ const getAllProducts = async (req: Request, _res: Response) => {
       prisma.products.count({ where }),
     ]);
 
-    return {
+    return res.json({
       message: "Products fetched successfully",
       products,
       totalProducts,
       page: pageNum,
       limit: limitNum,
-    };
+    });
   } catch (error) {
     console.error("Error fetching products:", error);
-    throw new Error("Failed to fetch products");
+    return res.status(500).json({ message: "Failed to fetch products", error });
   }
 };
 
@@ -379,16 +406,85 @@ const updateProduct = async (req: MulterRequest, res: Response) => {
 };
 
 // delete the product based on id
+// const deleteProduct = async (req: Request, res: Response) => {
+//   const { id } = req.params;
+
+//   if (!id) {
+//     return res.status(400).json({ error: "Product ID is required" });
+//   }
+//   console.log("Deleting product with ID:", id);
+//   try {
+//     const productExists = await prisma.products.findUnique({
+//       where: { id },
+//     });
+
+//     if (!productExists) {
+//       return res.status(404).json({ error: "Product not found" });
+//     }
+
+//     await prisma.$transaction(async (tx) => {
+//       const productImages = await tx.product_Images.findMany({
+//         where: { product_id: id },
+//       });
+
+//       if (productImages.length > 0) {
+//         for (const image of productImages) {
+//           await DeleteOldImage(image.image_url);
+//         }
+//         await tx.product_Images.deleteMany({
+//           where: { product_id: id },
+//         });
+//       }
+//       const createdBy = req.user?.id;
+//       if (!createdBy) {
+//         return res.status(400).json({ error: "User ID is required" });
+//       }
+
+//       // Log final stock removal BEFORE deleting product
+//       if (productExists.stock > 0) {
+//         const createdBy = req.user?.id; // must reference a real user
+//         if (createdBy) {
+//           await tx.inventory_transactions.create({
+//             data: {
+//               product_id: productExists.id,
+//               delta: -productExists.stock,
+//               reason: "Product deleted",
+//               created_by: createdBy,
+//             },
+//           });
+//         } else {
+//           console.warn(
+//             "Skipping inventory transaction (delete) - no authenticated user id present"
+//           );
+//         }
+//       }
+
+//       const deletedProduct = await tx.products.delete({
+//         where: { id },
+//       });
+
+//       return res.status(200).json({
+//         message: "Product deleted successfully",
+//         product: deletedProduct,
+//       });
+//     });
+//   } catch (error) {
+//     console.error("Error deleting product:", error);
+//     return res.status(500).json({ error: "Internal server error" });
+//   }
+// };
+
 const deleteProduct = async (req: Request, res: Response) => {
   const { id } = req.params;
 
   if (!id) {
     return res.status(400).json({ error: "Product ID is required" });
   }
-
+  console.log("Deleting product with ID:", id);
   try {
     const productExists = await prisma.products.findUnique({
       where: { id },
+      include: { imagesURL: true },
     });
 
     if (!productExists) {
@@ -396,42 +492,43 @@ const deleteProduct = async (req: Request, res: Response) => {
     }
 
     await prisma.$transaction(async (tx) => {
-      const productImages = await tx.product_Images.findMany({
-        where: { product_id: id },
-      });
-
-      if (productImages.length > 0) {
-        for (const image of productImages) {
-          await DeleteOldImage(image.image_url);
-        }
-        await tx.product_Images.deleteMany({
-          where: { product_id: id },
-        });
+      const createdBy = req.user?.id;
+      if (!createdBy) {
+        return res.status(400).json({ error: "User ID is required" });
       }
 
-      // Log final stock removal BEFORE deleting product
       if (productExists.stock > 0) {
-        await tx.inventory_transactions.create({
-          data: {
-            product_id: productExists.id,
-            delta: -productExists.stock,
-            reason: "Product deleted",
-            created_by: "system",
-          },
-        });
+        await adjustStock(
+          productExists.id,
+            -productExists.stock,
+            "Product archived (stock cleared)",
+            createdBy,
+            tx as typeof prisma
+        );
       }
 
-      const deletedProduct = await tx.products.delete({
+      if (productExists.imagesURL?.length) {
+        for (const img of productExists.imagesURL) {
+          await DeleteOldImage(img.image_url).catch(() => {});
+        }
+        await tx.product_Images.deleteMany({ where: { product_id: id } });
+      }
+
+      const archived = await tx.products.update({
         where: { id },
+        data: { is_active: false }, 
       });
+
+
+      console.log(`Product with ID: ${id} has been archived.`);
 
       return res.status(200).json({
-        message: "Product deleted successfully",
-        product: deletedProduct,
+        message: "Product archived successfully",
+        product: archived,
       });
     });
   } catch (error) {
-    console.error("Error deleting product:", error);
+    console.error("Error deleting product (soft):", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };

@@ -1,4 +1,4 @@
-import { prisma } from "../index.js";
+import { prisma } from "../prismaClient.js";
 import type { Request, Response } from "express";
 import type { OrderStatus, Role } from "../types/type.js";
 import { allowedTransitions, deliveryToOrderStatusMap } from "../constant.js";

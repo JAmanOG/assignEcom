@@ -1,10 +1,11 @@
-import { prisma } from "../index.js";
+import { prisma } from "../prismaClient.js";
 import { allFieldRequired } from "../helper/helper.js";
 import type { Request, Response } from "express";
 
 const addItemToCart = async (req: Request, res: Response) => {
   const userId = req.user?.id;
   const { productId, quantity = 1 } = req.body;
+  console.log("Adding item to cart:", { userId, productId, quantity });
   if (!allFieldRequired({ productId, quantity })) {
     return res.status(400).json({ message: "productId & quantity required" });
   }
@@ -14,11 +15,11 @@ const addItemToCart = async (req: Request, res: Response) => {
   if (!product) return res.status(404).json({ message: "Product not found" });
 
   const cart = await prisma.carts.upsert({
-    where: { userId: userId as string},
+    where: { userId: userId as string },
     create: { userId, items: { create: [] } } as any,
     update: {},
   });
-  
+
   const existing = await prisma.cart_Items.findUnique({
     where: { cartId_productId: { cartId: cart.id, productId } },
   });
@@ -50,7 +51,7 @@ const addItemToCart = async (req: Request, res: Response) => {
 // Get user's cart
 const getUserCart = async (req: Request, res: Response) => {
   const userId = req.user?.id;
-
+  console.log("Fetching cart for user:", userId);
   // Validate userId
   if (!userId) {
     return res.status(400).json({ message: "User ID is required" });
@@ -59,11 +60,26 @@ const getUserCart = async (req: Request, res: Response) => {
   try {
     // Fetch user's cart
     const cart = await prisma.carts.findUnique({
-      where: { id: userId as string },
+      where: { userId: userId as string },
       include: {
-        items: true,
+        items: {
+          include: {
+            product: {
+              select: {
+                description: true,
+                price: true,
+                stock: true,
+                imagesURL: {
+                  select: { image_url: true },
+                },
+              },
+            },
+          },
+        },
       },
     });
+    
+    console.log("Fetched cart:", cart);
 
     if (!cart) {
       return res.status(404).json({ message: "Cart not found" });
@@ -88,7 +104,9 @@ const removeItemFromCart = async (req: Request, res: Response) => {
 
   try {
     // Check if cart item exists
-    const cartItemExists = await prisma.cart_Items.findUnique({ where: { id: itemId as string } });
+    const cartItemExists = await prisma.cart_Items.findUnique({
+      where: { id: itemId as string },
+    });
 
     if (!cartItemExists) {
       return res.status(404).json({ message: "Cart item not found" });
@@ -101,7 +119,7 @@ const removeItemFromCart = async (req: Request, res: Response) => {
 
     // Remove item from cart
     await prisma.cart_Items.delete({
-      where: { id: itemId as string},
+      where: { id: itemId as string },
     });
 
     return res
@@ -141,12 +159,10 @@ const updateCartItemQuantity = async (req: Request, res: Response) => {
       data: { quantity, total_price: cartItemExists.unit_price * quantity },
     });
 
-    return res
-      .status(200)
-      .json({
-        message: "Cart item quantity updated successfully",
-        updatedCartItem,
-      });
+    return res.status(200).json({
+      message: "Cart item quantity updated successfully",
+      updatedCartItem,
+    });
   } catch (error) {
     console.error("Error updating cart item quantity:", error);
     return res.status(500).json({ message: "Internal server error" });
