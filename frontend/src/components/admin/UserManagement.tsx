@@ -24,57 +24,57 @@ interface User {
   deliveriesCount?: number;
 }
 
-const mockUsers: User[] = [
-  {
-    id: '1',
-    full_name: 'John Admin',
-    email: 'admin@store.com',
-    role: 'ADMIN',
-    is_active:  true,
-    createdAt: '2024-01-01T00:00:00Z',
-    lastLogin: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: '2',
-    full_name: 'John Doe',
-    email: 'customer@example.com',
-    role: 'CUSTOMER',
-    is_active:  true,
-    createdAt: '2024-01-10T00:00:00Z',
-    lastLogin: '2024-01-15T14:20:00Z',
-    ordersCount: 5
-  },
-  {
-    id: '3',
-    full_name: 'Jane Smith',
-    email: 'jane@example.com',
-    role: 'CUSTOMER',
-    is_active:  true,
-    createdAt: '2024-01-12T00:00:00Z',
-    lastLogin: '2024-01-14T09:15:00Z',
-    ordersCount: 3
-  },
-  {
-    id: '4',
-    full_name: 'Mike Wilson',
-    email: 'delivery@store.com',
-    role: 'DELIVERY',
-    is_active:  true,
-    createdAt: '2024-01-05T00:00:00Z',
-    lastLogin: '2024-01-15T08:00:00Z',
-    deliveriesCount: 15
-  },
-  {
-    id: '5',
-    full_name: 'Bob Johnson',
-    email: 'bob@example.com',
-    role: 'CUSTOMER',
-    is_active:  false,
-    createdAt: '2024-01-08T00:00:00Z',
-    lastLogin: '2024-01-10T12:00:00Z',
-    ordersCount: 1
-  }
-];
+// const mockUsers: User[] = [
+//   {
+//     id: '1',
+//     full_name: 'John Admin',
+//     email: 'admin@store.com',
+//     role: 'ADMIN',
+//     is_active:  true,
+//     createdAt: '2024-01-01T00:00:00Z',
+//     lastLogin: '2024-01-15T10:30:00Z'
+//   },
+//   {
+//     id: '2',
+//     full_name: 'John Doe',
+//     email: 'customer@example.com',
+//     role: 'CUSTOMER',
+//     is_active:  true,
+//     createdAt: '2024-01-10T00:00:00Z',
+//     lastLogin: '2024-01-15T14:20:00Z',
+//     ordersCount: 5
+//   },
+//   {
+//     id: '3',
+//     full_name: 'Jane Smith',
+//     email: 'jane@example.com',
+//     role: 'CUSTOMER',
+//     is_active:  true,
+//     createdAt: '2024-01-12T00:00:00Z',
+//     lastLogin: '2024-01-14T09:15:00Z',
+//     ordersCount: 3
+//   },
+//   {
+//     id: '4',
+//     full_name: 'Mike Wilson',
+//     email: 'delivery@store.com',
+//     role: 'DELIVERY',
+//     is_active:  true,
+//     createdAt: '2024-01-05T00:00:00Z',
+//     lastLogin: '2024-01-15T08:00:00Z',
+//     deliveriesCount: 15
+//   },
+//   {
+//     id: '5',
+//     full_name: 'Bob Johnson',
+//     email: 'bob@example.com',
+//     role: 'CUSTOMER',
+//     is_active:  false,
+//     createdAt: '2024-01-08T00:00:00Z',
+//     lastLogin: '2024-01-10T12:00:00Z',
+//     ordersCount: 1
+//   }
+// ];
 
 const roleColors = {
   ADMIN: 'default',
@@ -103,7 +103,7 @@ export function UserManagement() {
       console.log("Fetched users:", res.data.users);
       return res.data.users;
     },
-    initialData: mockUsers,
+    initialData: [],
     refetchOnWindowFocus: false // Disable refetching on window focus
   });
 

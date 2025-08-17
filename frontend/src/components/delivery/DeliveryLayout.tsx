@@ -32,7 +32,7 @@ export function DeliveryLayout({ children }: DeliveryLayoutProps) {
   };
 
   // Mock pending deliveries count
-  const pendingCount = 5;
+  const pendingCount = 1;
 
   return (
     <div className="min-h-screen bg-muted/30">

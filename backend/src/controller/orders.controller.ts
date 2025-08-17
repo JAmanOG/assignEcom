@@ -293,7 +293,7 @@ const getUserOrders = async (req: Request, res: Response) => {
       include: {
         items: true,
         shipping_address: true,
-        delivery: true,
+        delivery: { include: { delivery_partner: true } }, 
       },
       skip,
       take,
@@ -336,8 +336,8 @@ const getOrderDetails = async (req: Request, res: Response) => {
       include: {
         items: true,
         shipping_address: true,
-        delivery: true,
-      },
+        delivery: { include: { delivery_partner: true } }, // <--- nested include
+              },
     });
 
     if (!order) {
@@ -367,7 +367,7 @@ const getAllOrders = async (req: Request, res: Response) => {
         items: true,
         user: true,
         shipping_address: true,
-        delivery: true,
+        delivery: { include: { delivery_partner: true } },
       },
     });
 
@@ -437,7 +437,7 @@ const updateOrderStatus = async (req: Request, res: Response) => {
         items: true,
         user: true,
         shipping_address: true,
-        delivery: true,
+        delivery: { include: { delivery_partner: true } },
       },
     });
 
@@ -459,6 +459,11 @@ const updateOrderStatus = async (req: Request, res: Response) => {
 const assignOrderToDelivery = async (req: Request, res: Response) => {
   const orderId = req.params.id;
   const { deliveryPartnerId } = req.body;
+
+  console.log("Assigning order to delivery:", {
+    orderId,
+    deliveryPartnerId,
+  });
 
   // Validate required fields
   if (!orderId || !deliveryPartnerId) {
@@ -502,7 +507,7 @@ const assignOrderToDelivery = async (req: Request, res: Response) => {
         items: true,
         user: true,
         shipping_address: true,
-        delivery: true,
+        delivery: { include: { delivery_partner: true } }, // added
       },
     });
 

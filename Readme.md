@@ -14,7 +14,6 @@ A monorepo containing a TypeScript / Node.js (Express 5) backend and a React 19 
 - Inventory Transactions (auditable stock adjustments)
 - Shipping Amount & Totals Computation
 - Swagger OpenAPI documentation (/api-docs)
-- Postman collection generator script
 - Responsive React frontend (role specific dashboard shells)
 
 ## 2. Tech Stack
@@ -194,13 +193,11 @@ Environment hardening:
 - Enable HTTPS & secure cookies (if you later store tokens in cookies)
 - Configure CORS to specific domains only
 
-## 15. Testing (Planned)
-Add Jest / Vitest for unit tests; Supertest for API endpoints. Not yet implemented.
 
-## 16. Logging & Monitoring (Planned)
+## 15. Logging & Monitoring (Planned)
 Add Winston / Pino logger abstraction; integrate with a log aggregator (e.g., ELK, Loki) and health metrics.
 
-## 17. Future Enhancements
+## 16. Future Enhancements
 - Payment gateway integration (Stripe / Razorpay)
 - Advanced discount & coupon engine
 - Product search & filtering (full text / vector search)
@@ -209,14 +206,14 @@ Add Winston / Pino logger abstraction; integrate with a log aggregator (e.g., EL
 - Rate limiting & input sanitization
 - CI/CD workflow, containerization, deployment scripts
 
-## 18. Contributing
+## 17. Contributing
 1. Fork & clone
 2. Create feature branch: `git checkout -b feat/short-description`
 3. Make changes + add migration if schema changes
 4. Ensure lint passes
 5. Open PR describing changes & test steps
 
-## 19. Troubleshooting
+## 18. Troubleshooting
 | Issue | Cause | Fix |
 |-------|-------|-----|
 | Cannot connect to DB | Wrong DATABASE_URL | Verify credentials / network |
@@ -225,7 +222,7 @@ Add Winston / Pino logger abstraction; integrate with a log aggregator (e.g., EL
 | Cloudinary upload fails | Env vars missing | Set CLOUD_* vars |
 | Swagger empty | Missing JSDoc comments / server not restarted | Add comments & restart |
 
-## 20. License
+## 19. License
 Add your chosen license here (e.g., MIT).
 
 ---

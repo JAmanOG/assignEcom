@@ -124,6 +124,22 @@ export function OrderManagement() {
           (sum: number, it: any) => sum + (Number(it.line_total) || 0),
           0
         );
+
+        const partner = o.delivery?.delivery_partner;
+        const deliveryPersonnel = o.delivery
+          ? {
+              id:
+                partner?.id ||
+                o.delivery.delivery_partner_id || 
+                o.delivery.id,
+              name:
+                partner?.full_name ||
+                partner?.email ||
+                partner?.phone ||
+                "Assigned Partner",
+            }
+          : null;
+
         return {
           id: o.id,
           customer: {
@@ -138,18 +154,13 @@ export function OrderManagement() {
           status: (o.status as OrderStatus) || "PENDING",
           paymentStatus: (o.payment_status as PaymentStatus) || "UNPAID",
           items,
-          total,
+            total,
           createdAt:
             o.placed_at ||
             o.created_at ||
             o.createdAt ||
             new Date().toISOString(),
-          deliveryPersonnel: o.delivery
-            ? {
-                id: o.delivery.id,
-                name: o.delivery.full_name || o.delivery.name,
-              }
-            : null,
+          deliveryPersonnel,
           raw: o,
         };
       });
@@ -159,7 +170,7 @@ export function OrderManagement() {
     // staleTime: 1000 * 60,
   });
 
-  // console.log("Fetched orders:", ordersQuery.data);
+  console.log("Fetched orders:", ordersQuery.data);
 
   // Fetch delivery users (assumes API returns { users: [...] } or array)
   const deliveryUsersQuery = useQuery<{ id: string; name: string }[]>({
@@ -197,7 +208,7 @@ export function OrderManagement() {
       orderId: string;
       status: OrderStatus;
     }) => {
-      return axios.patch(`/api/orders/${orderId}/status`, { status });
+      return axios.put(`/api/orders/admin/orders/${orderId}/status`, { status });
     },
     onMutate: ({ orderId, status }) => {
       setOrders((prev) =>
@@ -222,8 +233,8 @@ export function OrderManagement() {
       orderId: string;
       deliveryId: string;
     }) => {
-      return axios.post(`/api/orders/${orderId}/assign-delivery`, {
-        deliveryId,
+      return axios.put(`/api/orders/admin/orders/${orderId}/assign`, {
+        deliveryPartnerId: deliveryId,
       });
     },
     onMutate: ({ orderId, deliveryId }) => {
@@ -629,6 +640,7 @@ export function OrderManagement() {
                                       Assigned to:
                                     </span>
                                     <div>
+                                      {console.log(selectedOrder)}
                                       {selectedOrder.deliveryPersonnel.name}
                                     </div>
                                   </div>
