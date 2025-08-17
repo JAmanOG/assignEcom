@@ -13,7 +13,7 @@ import { ProductManagement } from "./components/admin/ProductManagement";
 import { OrderManagement } from "./components/admin/OrderManagement";
 import { UserManagement } from "./components/admin/UserManagement";
 import { AnalyticsPage } from "./components/admin/AnalyticsPage";
-import { SettingsPage } from "./components/admin/SettingsPage";
+
 import NotFound from "./pages/NotFound";
 import { CustomerShop } from "./components/customer/customer-shop";
 import { DeliveryLayout } from "./components/delivery/DeliveryLayout";
@@ -93,13 +93,13 @@ function App() {
               </AdminLayout>
             </ProtectedRoute>
           } />
-          <Route path="/admin/settings" element={
+          {/* <Route path="/admin/settings" element={
             <ProtectedRoute requiredRole="ADMIN">
               <AdminLayout>
                 <SettingsPage />
               </AdminLayout>
             </ProtectedRoute>
-          } />
+          } /> */}
 
           {/* Customer Routes */}
           <Route path="/shop" element={

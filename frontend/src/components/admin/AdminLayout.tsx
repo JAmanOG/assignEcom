@@ -27,7 +27,6 @@ const sidebarItems = [
   { icon: ShoppingCart, label: 'Orders', path: '/admin/orders' },
   { icon: Users, label: 'Users', path: '/admin/users' },
   { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
-  { icon: Settings, label: 'Settings', path: '/admin/settings' },
 ];
 
 export function AdminLayout({ children }: AdminLayoutProps) {
