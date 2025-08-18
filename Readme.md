@@ -2,7 +2,12 @@
 
 A monorepo containing a TypeScript / Node.js (Express 5) backend and a React 19 + Vite + TailwindCSS frontend. Provides user, product, cart, order, delivery, inventory, and category management with JWT auth, role-based access control, Swagger docs, and Prisma ORM (PostgreSQL).
 
-## watch Demo here [Demo](https://drive.google.com/file/d/1pB_50vg9cP5BQtv7cVPsTiqB7WqfHQoH/view?usp=sharing) - deployed but azure credits get over today morning
+## watch Demo here [Demo](https://drive.google.com/file/d/1pB_50vg9cP5BQtv7cVPsTiqB7WqfHQoH/view?usp=sharing) 
+
+⚠️ **Note:** The server may respond slowly due to the limitations of Render.com's free tier. Thank you for your patience.
+
+* 🔗 [Live Demo](https://assign-ecom.vercel.app/shop)
+* 🔗 [Backend API Testing & Documentation](https://assignecom.onrender.com/api-docs/)
 
 ## 1. Features (Current)
 - Authentication & Authorization

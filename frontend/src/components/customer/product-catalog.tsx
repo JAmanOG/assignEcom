@@ -24,7 +24,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { CartItemSchema } from "@/lib/validation/cartSchemas";
 import { useToast } from "@/hooks/use-toast";
-import type { CartItem,Cart } from "@/types/type";
+import type { CartItem, Cart } from "@/types/type";
 
 interface Product {
   id: string;
@@ -58,7 +58,10 @@ export function ProductCatalog() {
 
   const [products] = useState<Product[]>([]);
 
-  const { data: cartData, isLoading: isCartLoading } = useQuery<Cart[], AxiosError>({
+  const { data: cartData, isLoading: isCartLoading } = useQuery<
+    Cart[],
+    AxiosError
+  >({
     queryKey: ["cart"],
     queryFn: async () => {
       const response = await axios.get("/api/cart");
@@ -69,7 +72,6 @@ export function ProductCatalog() {
     // staleTime: 1000 * 60, // 1 minute
     // refetchOnWindowFocus: false,
   });
-
 
   const {
     data: productsData,
@@ -89,7 +91,9 @@ export function ProductCatalog() {
         .map((p: any) => ({
           ...p,
           inStock: p.stock > 0,
-          cartData: cartData?.[0]?.items.find((c: CartItem) => c.productId === p.id) || null,
+          cartData:
+            cartData?.[0]?.items.find((c: CartItem) => c.productId === p.id) ||
+            null,
           image: p.imagesURL[0]?.image_url || "/placeholder.svg",
           description: p.description,
         }))
@@ -99,8 +103,6 @@ export function ProductCatalog() {
     },
     initialData: products,
   });
-
-
 
   const addProductMutation = useMutation({
     mutationFn: async (data: AddCart) => {
@@ -145,9 +147,9 @@ export function ProductCatalog() {
       const matchesSearch = product.name
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
-      const matchesCategory =
-        categoryFilter === "all" || product.category.name === categoryFilter;
-      return matchesSearch && matchesCategory;
+        const matchesCategory =
+        categoryFilter === "all" || product.category.id === categoryFilter;
+            return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -211,7 +213,7 @@ export function ProductCatalog() {
           </SelectTrigger>
           <SelectContent>
             {categories.map((cat) => (
-              <SelectItem key={cat.id} value={cat.name}>
+              <SelectItem key={cat.id} value={cat.id}>
                 {cat.name}
               </SelectItem>
             ))}
@@ -256,7 +258,6 @@ export function ProductCatalog() {
               <CardDescription>{product.description}</CardDescription>
             </CardHeader>
             <CardContent>
-
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <span className="text-2xl font-bold">${product.price}</span>
@@ -266,13 +267,12 @@ export function ProductCatalog() {
                     </span>
                   )}
                 </div>
-                {
-                  product.cartData ? (
-                    <span className="text-sm text-green-500">
+                {product.cartData ? (
+                  <span className="text-sm text-green-500">
                     In Cart: {product.cartData.quantity}
                   </span>
-                  ): (
-                    <Button
+                ) : (
+                  <Button
                     onClick={() => addToCart(product)}
                     disabled={!product.inStock}
                     size="sm"
@@ -280,9 +280,7 @@ export function ProductCatalog() {
                     <ShoppingCart className="h-4 w-4 mr-2" />
                     {product.inStock ? "Add to Cart" : "Out of Stock"}
                   </Button>
-  
-                  )
-                }
+                )}
               </div>
             </CardContent>
           </Card>
