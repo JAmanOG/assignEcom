@@ -2,6 +2,8 @@ import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { roleMiddleware } from "../middleware/role.middleware.js";
 import {reserveStockForOrder,restockProduct} from "../controller/inventory_transactions.controller.js";
+import { validate } from "../middleware/validation.middleware.js";
+import { reserveStockSchema, restockProductSchema } from "../validation/schemas.js";
 
 /**
  * @openapi
@@ -68,7 +70,7 @@ import {reserveStockForOrder,restockProduct} from "../controller/inventory_trans
 
 const router = Router();
 
-router.post("/stock/reserve", authMiddleware, roleMiddleware(["ADMIN"]), reserveStockForOrder);
-router.post("/stock/restock", authMiddleware, roleMiddleware(["ADMIN"]), restockProduct);
+router.post("/stock/reserve", authMiddleware, roleMiddleware(["ADMIN"]), validate({ body: reserveStockSchema }), reserveStockForOrder);
+router.post("/stock/restock", authMiddleware, roleMiddleware(["ADMIN"]), validate({ body: restockProductSchema }), restockProduct);
 
 export default router;

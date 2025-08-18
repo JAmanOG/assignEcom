@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { roleMiddleware } from "../middleware/role.middleware.js";
+import { validate } from "../middleware/validation.middleware.js";
+import { listUserOrdersQuerySchema, listAllOrdersQuerySchema, updateOrderStatusSchema, assignOrderSchema, placeOrderSchema, placeOrderFromCartSchema, idParamSchema, cartIdParamSchema } from "../validation/schemas.js";
 import {assignOrderToDelivery,getAllOrders,getOrderDetails,getUserOrders,placeOrder,updateOrderStatus,deleteOrder,placeOrderFromCart} from "../controller/orders.controller.js";
 
 const router = Router();
@@ -206,14 +208,14 @@ const router = Router();
  *       404: { $ref: '#/components/responses/NotFoundError' }
  */
 
-router.get("/admin/orders", authMiddleware, roleMiddleware(["ADMIN"]), getAllOrders);
-router.put("/admin/orders/:id/status", authMiddleware, roleMiddleware(["ADMIN"]), updateOrderStatus);
-router.put("/admin/orders/:id/assign", authMiddleware, roleMiddleware(["ADMIN"]), assignOrderToDelivery);
-router.delete("/admin/orders/:id", authMiddleware, roleMiddleware(["ADMIN"]), deleteOrder);
+router.get("/admin/orders", authMiddleware, roleMiddleware(["ADMIN"]), validate({ query: listAllOrdersQuerySchema }), getAllOrders);
+router.put("/admin/orders/:id/status", authMiddleware, roleMiddleware(["ADMIN"]), validate({ params: idParamSchema, body: updateOrderStatusSchema }), updateOrderStatus);
+router.put("/admin/orders/:id/assign", authMiddleware, roleMiddleware(["ADMIN"]), validate({ params: idParamSchema, body: assignOrderSchema }), assignOrderToDelivery);
+router.delete("/admin/orders/:id", authMiddleware, roleMiddleware(["ADMIN"]), validate({ params: idParamSchema }), deleteOrder);
 
-router.get("/", authMiddleware, roleMiddleware(["CUSTOMER"]), getUserOrders);
-router.post("/", authMiddleware, roleMiddleware(["CUSTOMER"]), placeOrder);
-router.post('/cart/:cartId/order', authMiddleware, roleMiddleware(["CUSTOMER"]), placeOrderFromCart);
-router.get("/:id", authMiddleware, roleMiddleware(["CUSTOMER"]), getOrderDetails);
+router.get("/", authMiddleware, roleMiddleware(["CUSTOMER"]), validate({ query: listUserOrdersQuerySchema }), getUserOrders);
+router.post("/", authMiddleware, roleMiddleware(["CUSTOMER"]), validate({ body: placeOrderSchema }), placeOrder);
+router.post('/cart/:cartId/order', authMiddleware, roleMiddleware(["CUSTOMER"]), validate({ params: cartIdParamSchema, body: placeOrderFromCartSchema }), placeOrderFromCart);
+router.get("/:id", authMiddleware, roleMiddleware(["CUSTOMER"]), validate({ params: idParamSchema }), getOrderDetails);
 
 export default router;

@@ -95,6 +95,7 @@ model Products {
 
 enum OrderStatus {
   PENDING
+  CONFIRMED
   PROCESSING
   SHIPPED
   DELIVERED

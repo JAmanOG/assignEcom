@@ -5,6 +5,7 @@ import type { AxiosError } from "axios";
 import { useToast } from "@/hooks/use-toast";
 import axios from "@/lib/axios";
 import type { Address } from "@/types/type";
+import { addressSchema } from "@/lib/validation/addressSchemas";
 
 // Extend backend Address with optional notes (UI only / if backend supports it it will pass through)
 type ApiAddress = Address & { notes?: string | null };
@@ -84,7 +85,9 @@ const AddressSelectionDialog = ({ onAddressSelect }: { onAddressSelect: (address
   // Add address
   const addAddressMutation = useMutation<ApiAddress, AxiosError<ErrorResponse>, Omit<ApiAddress, "id">>({
     mutationFn: async (payload) => {
-      const res = await axios.post("/api/address", payload);
+      // Validate using Zod schema
+      const validatedPayload = addressSchema.parse(payload);
+      const res = await axios.post("/api/address", validatedPayload);
       return res.data.address ?? res.data;
     },
     onSuccess: (newAddr) => {
@@ -111,7 +114,8 @@ const AddressSelectionDialog = ({ onAddressSelect }: { onAddressSelect: (address
   // Update address
   const updateAddressMutation = useMutation<ApiAddress, AxiosError<ErrorResponse>, ApiAddress>({
     mutationFn: async (payload) => {
-      const res = await axios.put(`/api/address/${payload.id}`, payload);
+      const validatedPayload = addressSchema.parse(payload);
+      const res = await axios.put(`/api/address/${validatedPayload.id}`, validatedPayload);
       return res.data.address ?? res.data;
     },
     onSuccess: (updated) => {

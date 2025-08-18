@@ -53,12 +53,6 @@ export function AdminDashboard() {
           staleTime: 1000 * 60 * 5,
           refetchOnWindowFocus: false,
         },
-        // {
-        //   queryKey: ["totalCustomers"],
-        //   queryFn: fetchTotalCustomers,
-        //   staleTime: 1000 * 60 * 5,
-        //   refetchOnWindowFocus: false,
-        // },
         {
           queryKey: ["totalProducts"],
           queryFn: fetchTotalProducts,
@@ -127,40 +121,6 @@ export function AdminDashboard() {
     status: order.delivery.status,
     date: order.placed_at
   })) || [];
-
-
-  // const recentOrders = [
-  //   {
-  //     id: 'ORD-001',
-  //     customer: 'John Doe',
-  //     amount: '$89.99',
-  //     status: 'processing',
-  //     date: '2024-01-15'
-  //   },
-  //   {
-  //     id: 'ORD-002',
-  //     customer: 'Jane Smith',
-  //     amount: '$156.50',
-  //     status: 'shipped',
-  //     date: '2024-01-15'
-  //   },
-  //   {
-  //     id: 'ORD-003',
-  //     customer: 'Mike Johnson',
-  //     amount: '$234.75',
-  //     status: 'delivered',
-  //     date: '2024-01-14'
-  //   },
-  //   {
-  //     id: 'ORD-004',
-  //     customer: 'Sarah Wilson',
-  //     amount: '$67.25',
-  //     status: 'pending',
-  //     date: '2024-01-14'
-  //   }
-  // ];
-
-
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {

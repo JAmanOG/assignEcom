@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { roleMiddleware } from "../middleware/role.middleware.js";
+import { validate } from "../middleware/validation.middleware.js";
+import { addItemToCartSchema, updateCartItemQuantitySchema, cartItemIdParamSchema } from "../validation/schemas.js";
 import {addItemToCart,getUserCart,removeItemFromCart,updateCartItemQuantity} from "../controller/carts.controller.js";
 
 /**
@@ -96,8 +98,8 @@ import {addItemToCart,getUserCart,removeItemFromCart,updateCartItemQuantity} fro
 const router = Router();
 
 router.get("/", authMiddleware, roleMiddleware(['CUSTOMER']), getUserCart);
-router.post("/add", authMiddleware,roleMiddleware(['CUSTOMER']), addItemToCart);
-router.put("/:itemId", authMiddleware,roleMiddleware(['CUSTOMER']), updateCartItemQuantity);
-router.delete("/:itemId", authMiddleware,roleMiddleware(['CUSTOMER']), removeItemFromCart);
+router.post("/add", authMiddleware,roleMiddleware(['CUSTOMER']), validate({ body: addItemToCartSchema }), addItemToCart);
+router.put("/:itemId", authMiddleware,roleMiddleware(['CUSTOMER']), validate({ params: cartItemIdParamSchema, body: updateCartItemQuantitySchema }), updateCartItemQuantity);
+router.delete("/:itemId", authMiddleware,roleMiddleware(['CUSTOMER']), validate({ params: cartItemIdParamSchema }), removeItemFromCart);
 
 export default router;

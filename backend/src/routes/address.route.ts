@@ -2,6 +2,8 @@ import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { roleMiddleware } from "../middleware/role.middleware.js";
 import { createAddress,deleteAddress,getAddresses,updateAddress } from "../controller/address.controller.js";
+import { validate } from "../middleware/validation.middleware.js";
+import { createAddressSchema, updateAddressSchema, idParamSchema } from "../validation/schemas.js";
 
 /**
  * @openapi
@@ -89,8 +91,8 @@ const router = Router();
 // DELETE /api/address/:id - Delete address (Customer only)
 
 router.get("/", authMiddleware,roleMiddleware(["CUSTOMER"]), getAddresses);
-router.post("/", authMiddleware,roleMiddleware(["CUSTOMER"]), createAddress);
-router.put("/:id", authMiddleware,roleMiddleware(["CUSTOMER"]), updateAddress);
-router.delete("/:id", authMiddleware,roleMiddleware(["CUSTOMER"]), deleteAddress);
+router.post("/", authMiddleware,roleMiddleware(["CUSTOMER"]), validate({ body: createAddressSchema }), createAddress);
+router.put("/:id", authMiddleware,roleMiddleware(["CUSTOMER"]), validate({ params: idParamSchema, body: updateAddressSchema }), updateAddress);
+router.delete("/:id", authMiddleware,roleMiddleware(["CUSTOMER"]), validate({ params: idParamSchema }), deleteAddress);
 
 export default router;

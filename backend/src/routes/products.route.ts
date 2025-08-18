@@ -4,6 +4,8 @@ import { authMiddleware } from "../middleware/auth.middleware.js";
 import { roleMiddleware } from "../middleware/role.middleware.js";
 import {createProduct,deleteProduct,getAllProducts,getProductDetails,updateProduct,getProductByFilter} from "../controller/products.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
+import { validate } from "../middleware/validation.middleware.js";
+import { listProductsQuerySchema, filterProductsQuerySchema, createProductSchema, updateProductSchema, idParamSchema } from "../validation/schemas.js";
 
 /**
  * @openapi
@@ -269,12 +271,12 @@ const updateProductHandler: RequestHandler = (req, res, next) => {
 };
 
 // Order routes to avoid /filter being captured by /:id
-router.get("/", getAllProducts);
-router.get("/filter", getProductByFilter); // moved before ":id"
-router.get("/:id", getProductDetails);
+router.get("/", validate({ query: listProductsQuerySchema }), getAllProducts);
+router.get("/filter", validate({ query: filterProductsQuerySchema }), getProductByFilter); // moved before ":id"
+router.get("/:id", validate({ params: idParamSchema }), getProductDetails);
 
-router.post("/", authMiddleware, roleMiddleware(["ADMIN"]), upload.fields([{ name: "imagesURL", maxCount: 5 }]), createProductHandler);
-router.put("/:id", authMiddleware, roleMiddleware(["ADMIN"]), upload.fields([{ name: "imagesURL", maxCount: 5 }]), updateProductHandler);
-router.delete("/:id", authMiddleware, roleMiddleware(["ADMIN"]), deleteProduct);
+router.post("/", authMiddleware, roleMiddleware(["ADMIN"]), upload.fields([{ name: "imagesURL", maxCount: 5 }]), validate({ body: createProductSchema }), createProductHandler);
+router.put("/:id", authMiddleware, roleMiddleware(["ADMIN"]), upload.fields([{ name: "imagesURL", maxCount: 5 }]), validate({ params: idParamSchema, body: updateProductSchema }), updateProductHandler);
+router.delete("/:id", authMiddleware, roleMiddleware(["ADMIN"]), validate({ params: idParamSchema }), deleteProduct);
 
 export default router;

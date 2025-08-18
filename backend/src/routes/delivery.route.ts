@@ -2,6 +2,8 @@ import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { roleMiddleware } from "../middleware/role.middleware.js";
 import { getAssignedDeliveries,updateDeliveryStatus } from "../controller/delivery.controller.js";
+import { validate } from "../middleware/validation.middleware.js";
+import { deliveryIdParamSchema, updateDeliveryStatusSchema } from "../validation/schemas.js";
 
 const router = Router();
 
@@ -82,6 +84,6 @@ const router = Router();
 // PUT /api/delivery/orders/:id/status - Update delivery status (Delivery only)
 
 router.get("/orders/get-assigned-delivery", authMiddleware, roleMiddleware(["DELIVERY"]), getAssignedDeliveries);
-router.put("/orders/:deliveryId/status", authMiddleware, roleMiddleware(["DELIVERY"]), updateDeliveryStatus);
+router.put("/orders/:deliveryId/status", authMiddleware, roleMiddleware(["DELIVERY"]), validate({ params: deliveryIdParamSchema, body: updateDeliveryStatusSchema }), updateDeliveryStatus);
 
 export default router;

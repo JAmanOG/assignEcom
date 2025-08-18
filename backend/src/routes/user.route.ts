@@ -2,6 +2,8 @@ import { Router } from "express";
 import {changePassword,getCurrentUser,loginUser,logoutUser,registerUser,updatingUser,listUsers,rotateRefreshToken, createAdminUser,createDeliveryPartner} from "../controller/user.controller.js"
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { roleMiddleware } from "../middleware/role.middleware.js";
+import { validate } from "../middleware/validation.middleware.js";
+import { registerUserSchema, loginUserSchema, updateUserSchema, changePasswordSchema, listUsersQuerySchema } from "../validation/schemas.js";
 const router = Router();
 
 /**
@@ -154,13 +156,13 @@ const router = Router();
  *       401: { $ref: '#/components/responses/UnauthorizedError' }
  */
 
-router.post("/register", registerUser);
-router.put("/update", authMiddleware, updatingUser);
-router.post("/login", loginUser);
+router.post("/register", validate({ body: registerUserSchema }), registerUser);
+router.put("/update", authMiddleware, validate({ body: updateUserSchema }), updatingUser);
+router.post("/login", validate({ body: loginUserSchema }), loginUser);
 router.post("/logout", authMiddleware, logoutUser);
-router.put("/change-password", authMiddleware, changePassword);
+router.put("/change-password", authMiddleware, validate({ body: changePasswordSchema }), changePassword);
 router.get("/me", authMiddleware, getCurrentUser);
-router.get("/users", authMiddleware, roleMiddleware(["ADMIN"]), listUsers);
+router.get("/users", authMiddleware, roleMiddleware(["ADMIN"]), validate({ query: listUsersQuerySchema }), listUsers);
 router.post("/rotate-refresh-token", authMiddleware, rotateRefreshToken);
 
 // Admin and Delivery Partner creation routes

@@ -6,9 +6,9 @@ export const ProductSchema = z.object({
     id: z.string().optional(),
     name: z.string().min(1, "Product name is required"),
     description: z.string().min(1, "Product description is required"),
-    price: z.coerce.number().positive("Price must be a positive number"), // ✅ accepts string or number
+    price: z.coerce.number().positive("Price must be a positive number"), 
     stock: z.coerce.number().int().nonnegative("Stock must be a non-negative integer"),
-    categoryId: z.string().min(1, "categoryId is required"), // ✅ matches your payload
+    categoryId: z.string().min(1, "categoryId is required"), 
     status: z.enum(["active", "inactive"]).default("active"),
     slug: z
       .string()
@@ -16,3 +16,4 @@ export const ProductSchema = z.object({
       .optional(),
   }).strict();
   
+  export const ProductCreateSchema = ProductSchema.omit({ id: true });

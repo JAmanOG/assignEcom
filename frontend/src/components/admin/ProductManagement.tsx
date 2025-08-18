@@ -135,11 +135,12 @@ export function ProductManagement() {
 
   const categories = useMemo((): Category[] => {
     const serverCategories = categoriesFromServer || [];
-    const baseCategoryObjects = baseCategories.map((name) => ({
-      id: name.toLowerCase(),
-      name,
-    }));
-    return [...baseCategoryObjects, ...serverCategories];
+    // const baseCategoryObjects = baseCategories.map((name) => ({
+    //   id: name.toLowerCase(),
+    //   name,
+    // }));
+    // return [...baseCategoryObjects, ...serverCategories];
+    return [...serverCategories];
   }, [categoriesFromServer]);
 
   const addProductMutation = useMutation({

@@ -21,9 +21,10 @@ Backend:
 - Node.js, Express 5, TypeScript
 - Prisma ORM + PostgreSQL
 - JWT (access + refresh) / bcrypt for password hashing
-- Cloudinary for image storage
+- Cloudinary for image storage with Multer middleware
 - Swagger (swagger-jsdoc + swagger-ui-express)
 - Socket.io (prepared for real‑time events)
+- Zod for request validation
 
 Frontend:
 - React 19, Vite, TypeScript

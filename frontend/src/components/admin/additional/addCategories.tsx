@@ -16,11 +16,13 @@ import axios from "@/lib/axios";
 import { categorySchema } from "@/lib/validation/categorySchemas";
 import { ZodError } from "zod";
 import type { Category } from "../ProductManagement";
+import { useToast } from "@/hooks/use-toast";
 type ChildProps = {
   onCategoryAdd: (category: Category) => void;
 };
 
 const AddCategory = ({ onCategoryAdd }: ChildProps) => {
+  const { toast } = useToast();
   const [newCategory, setNewCategory] = useState({
     name: "",
     slug: "",
@@ -42,6 +44,10 @@ const AddCategory = ({ onCategoryAdd }: ChildProps) => {
 
       // Call the parent callback to update state
       onCategoryAdd(res.data.category);
+      toast({
+        title: "Category Added",
+        description: `Category "${res.data.category.name}" has been added successfully.`,
+      });
 
       // Reset state
       setNewCategory({ name: "", slug: "" });
@@ -49,8 +55,18 @@ const AddCategory = ({ onCategoryAdd }: ChildProps) => {
     } catch (error: unknown) {
       if (error instanceof ZodError) {
         console.error("Validation error:", error.issues);
+        toast({
+          title: "Validation Error",
+          description: error.issues.map((issue) => issue.message).join(", "),
+          variant: "destructive",
+        });
       } else {
         console.error("Error adding category:", error);
+        toast({
+          title: "Error",
+          description: "Failed to add category. Please try again.",
+          variant: "destructive",
+        });
       }
     }
   };

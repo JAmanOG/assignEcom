@@ -2,6 +2,8 @@ import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { roleMiddleware } from "../middleware/role.middleware.js";
 import { createCategory,deleteCategory,getAllCategories,updateCategory } from "../controller/categories.controller.js";
+import { validate } from "../middleware/validation.middleware.js";
+import { createCategorySchema, updateCategorySchema, idParamSchema } from "../validation/schemas.js";
 
 const router = Router();
 
@@ -94,8 +96,8 @@ const router = Router();
  */
 
 router.get("/", getAllCategories);
-router.post("/", authMiddleware, roleMiddleware(["ADMIN"]), createCategory);
-router.put("/:id", authMiddleware, roleMiddleware(["ADMIN"]), updateCategory);
-router.delete("/:id", authMiddleware, roleMiddleware(["ADMIN"]), deleteCategory);
+router.post("/", authMiddleware, roleMiddleware(["ADMIN"]), validate({ body: createCategorySchema }), createCategory);
+router.put("/:id", authMiddleware, roleMiddleware(["ADMIN"]), validate({ params: idParamSchema, body: updateCategorySchema }), updateCategory);
+router.delete("/:id", authMiddleware, roleMiddleware(["ADMIN"]), validate({ params: idParamSchema }), deleteCategory);
 
 export default router;

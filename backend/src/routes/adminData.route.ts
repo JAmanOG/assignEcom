@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { roleMiddleware } from "../middleware/role.middleware.js";
+import { validate } from "../middleware/validation.middleware.js";
+import { orderStatusQuerySchema, deliveryStatusQuerySchema, topSellingProductsQuerySchema } from "../validation/schemas.js";
 import {getTotalNoOfOrders,getTotalNoOfOrdersByStatus,getTotalPendingDeliveriesByStatus,getTotalRevenue,
     getCategoryPerformance,getMonthlyOrderTrend,getMonthlyRevenueTrend,getRecentOrders,getSalesByCategory,getTopSellingProducts,getTotalActiveCustomers,getTotalProducts,getUserGrowth
 } from "../controller/adminData.controller.js";
@@ -159,8 +161,8 @@ const router = Router();
 // GET /api/admin/revenue/total - Get total revenue (Admin only)
 
 router.get("/orders/total", authMiddleware, roleMiddleware(["ADMIN"]), getTotalNoOfOrders);
-router.get("/orders/total/status", authMiddleware, roleMiddleware(["ADMIN"]), getTotalNoOfOrdersByStatus);
-router.get("/deliveries/total/status", authMiddleware, roleMiddleware(["ADMIN"]), getTotalPendingDeliveriesByStatus);
+router.get("/orders/total/status", authMiddleware, roleMiddleware(["ADMIN"]), validate({ query: orderStatusQuerySchema }), getTotalNoOfOrdersByStatus);
+router.get("/deliveries/total/status", authMiddleware, roleMiddleware(["ADMIN"]), validate({ query: deliveryStatusQuerySchema }), getTotalPendingDeliveriesByStatus);
 router.get("/revenue/total", authMiddleware, roleMiddleware(["ADMIN"]), getTotalRevenue);
 
 
@@ -169,7 +171,7 @@ router.get("/orders/trend", authMiddleware, roleMiddleware(["ADMIN"]), getMonthl
 router.get("/sales/category", authMiddleware, roleMiddleware(["ADMIN"]), getSalesByCategory);
 router.get("/users/total", authMiddleware, roleMiddleware(["ADMIN"]), getTotalActiveCustomers);
 
-router.get("/products/top-selling", authMiddleware, roleMiddleware(["ADMIN"]), getTopSellingProducts);
+router.get("/products/top-selling", authMiddleware, roleMiddleware(["ADMIN"]), validate({ query: topSellingProductsQuerySchema }), getTopSellingProducts);
 router.get("/performance/category", authMiddleware, roleMiddleware(["ADMIN"]), getCategoryPerformance);
 router.get("/performance/orders", authMiddleware, roleMiddleware(["ADMIN"]), getTotalNoOfOrdersByStatus);
 router.get("/orders/recent", authMiddleware, roleMiddleware(["ADMIN"]), getRecentOrders);
