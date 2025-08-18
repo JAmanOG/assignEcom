@@ -11,6 +11,7 @@ import {
 } from "../helper/helper.js";
 import type { Request, Response } from "express";
 import type { Role } from "../types/type.js";
+import { shouldIncludeInBody, shouldSetCookies, includeRefreshInBody, extractRefreshToken } from "../helper/helper.js";
 
 // registering a new user
 const registerUser = async (req: Request, res: Response) => {
@@ -69,6 +70,26 @@ const registerUser = async (req: Request, res: Response) => {
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
+    const sendTokens = shouldIncludeInBody();
+    const setCookies = shouldSetCookies();
+    if (setCookies) {
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/",
+        maxAge: 60 * 60 * 1000,
+      });
+    }
+
+
     return res.status(201).json({
       message: "User registered successfully",
       user: {
@@ -78,6 +99,11 @@ const registerUser = async (req: Request, res: Response) => {
         phone: newUser.phone,
         role: newUser.role,
       },
+      tokens: sendTokens ? {
+        accessToken,
+        expiresIn: 3600,
+        ...(includeRefreshInBody() && { refreshToken, refreshExpiresIn: 604800 })
+      } : undefined
     });
   } catch (error) {
     console.error("Error registering user:", error);
@@ -87,7 +113,12 @@ const registerUser = async (req: Request, res: Response) => {
 
 // Rotate Refresh Token
 const rotateRefreshToken = async (req: Request, res: Response) => {
-  const { refreshToken } = req.cookies;
+  // const { refreshToken } = req.cookies;
+  const refreshToken = extractRefreshToken(req);
+  if (!refreshToken) {
+    return res.status(401).json({ message: "No refresh token provided" });
+  }
+
   if (!refreshToken) {
     return res.status(401).json({ message: "No refresh token provided" });
   }
@@ -127,7 +158,32 @@ const rotateRefreshToken = async (req: Request, res: Response) => {
       maxAge: 60 * 60 * 1000,
     });
 
-    return res.status(200).json({ message: "Tokens rotated successfully" });
+    const sendTokensRotate = shouldIncludeInBody();
+    const setCookiesRotate = shouldSetCookies();
+    if (setCookiesRotate) {
+      res.cookie("refreshToken", newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+      res.cookie("accessToken", newAccessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        maxAge: 60 * 60 * 1000,
+      });
+    }
+
+
+    return res.status(200).json({
+      message: "Tokens rotated successfully",
+      tokens: sendTokensRotate ? {
+        accessToken: newAccessToken,
+        expiresIn: 3600,
+        ...(includeRefreshInBody() && { refreshToken: newRefreshToken, refreshExpiresIn: 604800 })
+      } : undefined
+    });
   } catch (error) {
     console.error("Error rotating refresh token:", error);
     return res
@@ -230,6 +286,26 @@ const loginUser = async (req: Request, res: Response) => {
       maxAge: 60 * 60 * 1000, // 1 hour
     });
 
+    const sendTokensLogin = shouldIncludeInBody();
+    const setCookiesLogin = shouldSetCookies();
+    if (setCookiesLogin) {
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/",
+        maxAge: 60 * 60 * 1000,
+      });
+    }
+
+
     return res.status(200).json({
       message: "Login successful",
       user: {
@@ -239,6 +315,11 @@ const loginUser = async (req: Request, res: Response) => {
         phone: user.phone,
         role: user.role,
       },
+      tokens: sendTokensLogin ? {
+        accessToken,
+        expiresIn: 3600,
+        ...(includeRefreshInBody() && { refreshToken, refreshExpiresIn: 604800 })
+      } : undefined
     });
   } catch (error) {
     console.error("Error logging in user:", error);
@@ -248,7 +329,8 @@ const loginUser = async (req: Request, res: Response) => {
 
 // logging out the user
 const logoutUser = async (req: Request, res: Response) => {
-  const { refreshToken } = req.cookies;
+  // const { refreshToken } = req.cookies;
+  const refreshToken = extractRefreshToken(req);
   try {
     if (refreshToken) {
       try {
@@ -261,9 +343,11 @@ const logoutUser = async (req: Request, res: Response) => {
         console.error("Invalid refresh token:", error);
       }
     }
-    res.clearCookie("refreshToken");
-    res.clearCookie("accessToken");
-    return res.status(200).json({ message: "Logout successful" });
+    if (shouldSetCookies()) {
+      res.clearCookie("refreshToken");
+      res.clearCookie("accessToken");
+    }
+      return res.status(200).json({ message: "Logout successful" });
   } catch (error) {
     console.error("Error logging out user:", error);
     return res.status(500).json({ message: "Internal server error" });

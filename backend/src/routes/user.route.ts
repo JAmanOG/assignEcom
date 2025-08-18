@@ -167,6 +167,6 @@ router.post("/rotate-refresh-token", authMiddleware, rotateRefreshToken);
 
 // Admin and Delivery Partner creation routes
 // router.post("/admin-create", createAdminUser);
-// router.post("/create-delivery-partner", createDeliveryPartner);
+router.post("/create-delivery-partner", createDeliveryPartner);
 
 export default router;

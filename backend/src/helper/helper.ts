@@ -68,3 +68,43 @@ export const ORFieldRequired = (fields: { [key: string]: any }): boolean => {
 
   return true;
 }
+
+
+export interface ExtractedTokens {
+  accessToken?: string;
+  refreshToken?: string;
+}
+
+export function extractAccessToken(req: any): string | undefined {
+  const header = req.header("Authorization");
+  if (header?.startsWith("Bearer ")) {
+    return header.slice(7).trim();
+  }
+  return req.cookies?.accessToken;
+}
+
+export function extractRefreshToken(req: any): string | undefined {
+  const header = req.header("Authorization");
+  if (header?.startsWith("Bearer ")) {
+    const raw = header.slice(7).trim();
+    if (raw.startsWith("rt_")) return raw.substring(3);
+  }
+  // Fallback body
+  if (req.body?.refreshToken) return req.body.refreshToken;
+  // Cookie last
+  return req.cookies?.refreshToken;
+}
+
+export function shouldIncludeInBody(): boolean {
+  const mode = process.env.TOKEN_RESPONSE_MODE || "cookie";
+  return mode === "body" || mode === "both";
+}
+
+export function shouldSetCookies(): boolean {
+  const mode = process.env.TOKEN_RESPONSE_MODE || "cookie";
+  return mode === "cookie" || mode === "both";
+}
+
+export function includeRefreshInBody(): boolean {
+  return (process.env.INCLUDE_REFRESH_TOKEN_IN_BODY || "false").toLowerCase() === "true";
+}
