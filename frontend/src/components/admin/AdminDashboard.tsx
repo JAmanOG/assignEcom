@@ -25,8 +25,6 @@ const fetchTotalRevenue = async () =>
   (await axios.get("/api/admin/revenue/total")).data;
 const fetchTotalOrders = async () =>
   (await axios.get("/api/admin/orders/total")).data;
-// const fetchTotalCustomers = async () =>
-//   (await axios.get("/api/admin/users/total")).data;
 const fetchTotalProducts = async () =>
   (await axios.get("/api/admin/products/total")).data;
 const getTotalPendingDeliveries = async () =>

@@ -77,15 +77,6 @@ export interface Category {
   slug?: string;
 }
 
-const baseCategories = [
-  "Fruits",
-  "Vegetables",
-  "Grains",
-  "Dairy",
-  "Meat",
-  "Electronics",
-];
-
 export function ProductManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
