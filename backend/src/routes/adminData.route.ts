@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { roleMiddleware } from "../middleware/role.middleware.js";
-import {getTotalNoOfOrders,getTotalNoOfOrdersByStatus,getTotalPendingDeliveriesByStatus,getTotalRevenue} from "../controller/adminData.controller.js";
+import {getTotalNoOfOrders,getTotalNoOfOrdersByStatus,getTotalPendingDeliveriesByStatus,getTotalRevenue,
+    getCategoryPerformance,getMonthlyOrderTrend,getMonthlyRevenueTrend,getRecentOrders,getSalesByCategory,getTopSellingProducts,getTotalActiveCustomers,getTotalProducts,getUserGrowth
+} from "../controller/adminData.controller.js";
 
 const router = Router();
 
@@ -40,6 +42,115 @@ const router = Router();
  *     security: [{ bearerAuth: [] }]
  *     responses:
  *       200: { description: Total revenue returned }
+ * /api/admin/revenue/trend:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get monthly revenue trend (DELIVERED orders)
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Monthly revenue data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items: { $ref: '#/components/schemas/MonthlyRevenueTrendItem' }
+ * /api/admin/orders/trend:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get monthly delivered order count trend
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Monthly order data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items: { $ref: '#/components/schemas/MonthlyOrderTrendItem' }
+ * /api/admin/sales/category:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get sales distribution by category (pie chart data)
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Category sales share
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items: { $ref: '#/components/schemas/CategorySalesItem' }
+ * /api/admin/users/total:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get total active customers
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Total active customers returned }
+ * /api/admin/products/top-selling:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get top selling products
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, minimum: 1, default: 5 }
+ *     responses:
+ *       200:
+ *         description: Top products
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items: { $ref: '#/components/schemas/TopSellingProduct' }
+ * /api/admin/performance/category:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get category performance (revenue & quantity)
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Category performance data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items: { $ref: '#/components/schemas/CategoryPerformanceItem' }
+ * /api/admin/orders/recent:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get recent orders summary (latest 5)
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Recent orders
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items: { $ref: '#/components/schemas/RecentOrderSummary' }
+ * /api/admin/products/total:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get total number of active products
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Total products count returned }
+ * /api/admin/users/growth:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get user growth by month for current year (customers & delivery partners)
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Monthly growth data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items: { $ref: '#/components/schemas/UserGrowthItem' }
  */
 
 // GET /api/admin/orders/total - Get total number of orders (Admin only)
@@ -51,5 +162,19 @@ router.get("/orders/total", authMiddleware, roleMiddleware(["ADMIN"]), getTotalN
 router.get("/orders/total/status", authMiddleware, roleMiddleware(["ADMIN"]), getTotalNoOfOrdersByStatus);
 router.get("/deliveries/total/status", authMiddleware, roleMiddleware(["ADMIN"]), getTotalPendingDeliveriesByStatus);
 router.get("/revenue/total", authMiddleware, roleMiddleware(["ADMIN"]), getTotalRevenue);
+
+
+router.get("/revenue/trend", authMiddleware, roleMiddleware(["ADMIN"]), getMonthlyRevenueTrend);
+router.get("/orders/trend", authMiddleware, roleMiddleware(["ADMIN"]), getMonthlyOrderTrend);
+router.get("/sales/category", authMiddleware, roleMiddleware(["ADMIN"]), getSalesByCategory);
+router.get("/users/total", authMiddleware, roleMiddleware(["ADMIN"]), getTotalActiveCustomers);
+
+router.get("/products/top-selling", authMiddleware, roleMiddleware(["ADMIN"]), getTopSellingProducts);
+router.get("/performance/category", authMiddleware, roleMiddleware(["ADMIN"]), getCategoryPerformance);
+router.get("/performance/orders", authMiddleware, roleMiddleware(["ADMIN"]), getTotalNoOfOrdersByStatus);
+router.get("/orders/recent", authMiddleware, roleMiddleware(["ADMIN"]), getRecentOrders);
+router.get("/products/total", authMiddleware, roleMiddleware(["ADMIN"]), getTotalProducts);
+router.get("/users/growth", authMiddleware, roleMiddleware(["ADMIN"]), getUserGrowth);
+
 
 export default router;

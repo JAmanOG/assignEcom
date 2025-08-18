@@ -22,7 +22,7 @@ import { Minus, Plus, Trash2, ShoppingBag, CheckCircle, Badge, Truck, Package, C
 import axios from "@/lib/axios";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { PhotoView } from "react-photo-view";
-import type { CartItem, Cart } from "@/types/type";
+import type { CartItem } from "@/types/type";
 import { useToast } from "@/hooks/use-toast";
 import AddressSelectionDialog from "./component/addressSelection";
 import type { Address } from "@/types/type";
@@ -79,11 +79,21 @@ export function ShoppingCart() {
   
       return { previousCart };
     },
-    onError: (err, newCart, context) => {
+    onError: (err, _newCart, context) => {
       queryClient.setQueryData(["cart"], context?.previousCart);
+      toast({
+        title: "Error updating cart",
+        description: `Failed to update cart: ${err.message}`,
+        variant: "destructive",
+      });
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["cart"], data); 
+      toast({
+        title: "Cart updated",
+        description: "Your cart has been successfully updated.",
+        variant: "success",
+      });
     },
   });
 

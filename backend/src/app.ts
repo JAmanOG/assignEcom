@@ -6,7 +6,7 @@ import { Env } from "./config.js";
 const app = express();
 
 const corsOptions = {
-    origin: Env.CORS_ORIGIN || "http://localhost:5173",
+    origin:[ process.env.CORS_ORIGIN || "http://localhost:5173", "https://assign-ecom.vercel.app"],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -29,6 +29,7 @@ import cartRoutes from "./routes/carts.route.js";
 import deliveryRoutes from "./routes/delivery.route.js";
 import adminDataRoutes from "./routes/adminData.route.js";
 import addressRoutes from "./routes/address.route.js";
+import inventoryTransactionsRoutes from "./routes/inventory_transactions.route.js";
 
 // Use routes
 app.use("/api/auth", userRoutes);
@@ -39,6 +40,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/delivery", deliveryRoutes);
 app.use("/api/admin", adminDataRoutes);
 app.use("/api/address", addressRoutes);
+app.use("/api/inventory", inventoryTransactionsRoutes);
 
 
 export { app };

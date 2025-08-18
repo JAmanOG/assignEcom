@@ -19,14 +19,24 @@ import { CustomerShop } from "./components/customer/customer-shop";
 import { DeliveryLayout } from "./components/delivery/DeliveryLayout";
 import { DeliveryDashboard } from "./components/delivery/DeliveryDashboard";
 import { RegisterPage } from "./components/auth/RegisterPage";
-import { PhotoProvider } from 'react-photo-view';
-import 'react-photo-view/dist/react-photo-view.css';
+import { PhotoProvider } from "react-photo-view";
+import "react-photo-view/dist/react-photo-view.css";
+import { useEffect, useState } from "react";
+import type { User } from "./types/type";
 
 const queryClient = new QueryClient();
 
 // Home page redirect based on user role
 function HomePage() {
-  const user = authService.getCurrentUser();
+  const [user, setUser] = useState<User | null>(null);
+  
+  useEffect(() => {
+    const fetchUser = async () => {
+      const currentUser = await authService.getCurrentUser();
+      setUser(currentUser);
+    };
+    fetchUser();
+  }, []);
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -48,52 +58,67 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-      <PhotoProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+        <PhotoProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
 
-            {/* Admin Routes */}
-          <Route path="/admin" element={
-            <ProtectedRoute requiredRole="ADMIN">
-              <AdminLayout>
-                <AdminDashboard />
-              </AdminLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/products" element={
-            <ProtectedRoute requiredRole="ADMIN">
-              <AdminLayout>
-                <ProductManagement />
-              </AdminLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/orders" element={
-            <ProtectedRoute requiredRole="ADMIN">
-              <AdminLayout>
-                <OrderManagement />
-              </AdminLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/users" element={
-            <ProtectedRoute requiredRole="ADMIN">
-              <AdminLayout>
-                <UserManagement />
-              </AdminLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/analytics" element={
-            <ProtectedRoute requiredRole="ADMIN">
-              <AdminLayout>
-                <AnalyticsPage />
-              </AdminLayout>
-            </ProtectedRoute>
-          } />
-          {/* <Route path="/admin/settings" element={
+              {/* Admin Routes */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requiredRole="ADMIN">
+                    <AdminLayout>
+                      <AdminDashboard />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/products"
+                element={
+                  <ProtectedRoute requiredRole="ADMIN">
+                    <AdminLayout>
+                      <ProductManagement />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/orders"
+                element={
+                  <ProtectedRoute requiredRole="ADMIN">
+                    <AdminLayout>
+                      <OrderManagement />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute requiredRole="ADMIN">
+                    <AdminLayout>
+                      <UserManagement />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/analytics"
+                element={
+                  <ProtectedRoute requiredRole="ADMIN">
+                    <AdminLayout>
+                      <AnalyticsPage />
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+              {/* <Route path="/admin/settings" element={
             <ProtectedRoute requiredRole="ADMIN">
               <AdminLayout>
                 <SettingsPage />
@@ -101,28 +126,32 @@ function App() {
             </ProtectedRoute>
           } /> */}
 
-          {/* Customer Routes */}
-          <Route path="/shop" element={
-            <ProtectedRoute requiredRole="CUSTOMER">
-              <CustomerShop />
-            </ProtectedRoute>
-          } />
+              {/* Customer Routes */}
+              <Route
+                path="/shop"
+                element={
+                  <ProtectedRoute requiredRole="CUSTOMER">
+                    <CustomerShop />
+                  </ProtectedRoute>
+                }
+              />
 
-          {/* Delivery Routes */}
-          <Route path="/delivery" element={
-            <ProtectedRoute requiredRole="DELIVERY">
-              <DeliveryLayout>
-                <DeliveryDashboard />
-              </DeliveryLayout>
-            </ProtectedRoute>
-          } />
+              {/* Delivery Routes */}
+              <Route
+                path="/delivery"
+                element={
+                  <ProtectedRoute requiredRole="DELIVERY">
+                    <DeliveryLayout>
+                      <DeliveryDashboard />
+                    </DeliveryLayout>
+                  </ProtectedRoute>
+                }
+              />
 
-
-          <Route path="*" element={<NotFound />} />
-
-          </Routes>
-        </BrowserRouter>
-      </PhotoProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </PhotoProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

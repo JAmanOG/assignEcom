@@ -80,34 +80,25 @@ class AuthService {
   }
 
   async logout(): Promise<void> {
-    const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/logout`);
-    if (response.status !== 200) {
-      throw new Error('Logout failed');
-    }
-
+    const base = import.meta.env.VITE_API_URL;
+    const response = await axios.post(`${base}/api/auth/logout`, undefined);
+    if (response.status !== 200) throw new Error('Logout failed');
     this.currentUser = null;
     localStorage.removeItem('user');
   }
 
   async getCurrentUser(): Promise<User | null> {
     if (this.currentUser) return this.currentUser;
-    
-    // const stored = localStorage.getItem('user');
-    // if (stored) {
-    //   this.currentUser = JSON.parse(stored);
-    //   return this.currentUser;
-    // }
-    const getCurrentUser = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/me`).then(response => response.data).catch(error => {
-      throw new Error(error.response?.data?.message || 'Failed to fetch current user');
-    });
-    
-
-    if (!getCurrentUser) {
-      this.currentUser = null;
-      return null;
-    }
-    this.currentUser = await getCurrentUser.user;
-
+    const base = import.meta.env.VITE_API_URL;
+    const getCurrentUser = await axios
+      .get(`${base}/api/auth/me`,)
+      .then(r => r.data)
+      .catch(_error => {
+        this.currentUser = null;
+        return null;
+      });
+    if (!getCurrentUser) return null;
+    this.currentUser = getCurrentUser.user;
     localStorage.setItem('user', JSON.stringify(this.currentUser));
     return this.currentUser;
   }

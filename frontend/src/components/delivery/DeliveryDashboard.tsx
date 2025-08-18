@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,12 +64,13 @@ export function DeliveryDashboard() {
   // Fetch deliveries assigned to this delivery partner
   const {
     data: deliveriesData = [],
-    isLoading,
-    isError,
+    // isLoading,
+    // isError,
   } = useQuery({
     queryKey: ["deliveries"],
     queryFn: async () => {
       const res = await axios.get("/api/delivery/orders/get-assigned-delivery");
+      console.log("Fetched deliveries:", res.data);
       const payload = res.data?.deliveries ?? res.data ?? [];
       return payload as DeliveryType[];
     },
@@ -151,7 +152,7 @@ export function DeliveryDashboard() {
       return axios.put(`/api/delivery/orders/${id}/status`, { status, notes });
     },
     onMutate: async ({ id, status, notes }) => {
-      await queryClient.cancelQueries(["deliveries"]);
+      await queryClient.cancelQueries({ queryKey: ["deliveries"] });
       const previous = queryClient.getQueryData(["deliveries"]);
 
       setOrders((prev) =>
@@ -169,15 +170,15 @@ export function DeliveryDashboard() {
 
       return { previous };
     },
-    onError: (err, variables, context: any) => {
-      toast({ title: "Error", description: "Failed to update status" });
+    onError: (err, _variables, context: any) => {
+      toast({ title: "Error", description: `Failed to update status ${err.message}` });
       if (context?.previous)
         queryClient.setQueryData(["deliveries"], context.previous);
-      queryClient.invalidateQueries(["deliveries"]);
+      queryClient.invalidateQueries({ queryKey: ["deliveries"] });
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Delivery status updated" });
-      queryClient.invalidateQueries(["deliveries"]);
+      queryClient.invalidateQueries({ queryKey: ["deliveries"] });
     },
   });
 

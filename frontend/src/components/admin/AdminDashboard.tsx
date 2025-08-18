@@ -17,70 +17,150 @@ import {
   TrendingUp,
   Eye
 } from 'lucide-react';
+import axios from "@/lib/axios";
+import { useQueries } from "@tanstack/react-query";
+
+
+const fetchTotalRevenue = async () =>
+  (await axios.get("/api/admin/revenue/total")).data;
+const fetchTotalOrders = async () =>
+  (await axios.get("/api/admin/orders/total")).data;
+// const fetchTotalCustomers = async () =>
+//   (await axios.get("/api/admin/users/total")).data;
+const fetchTotalProducts = async () =>
+  (await axios.get("/api/admin/products/total")).data;
+const getTotalPendingDeliveries = async () =>
+  (await axios.get("/api/admin/deliveries/total/status?status=UNASSIGNED")).data;
+const getRecentOrders = async () =>
+  (await axios.get("/api/admin/orders/recent")).data;
+const getTopCategories = async () =>
+  (await axios.get("/api/admin/performance/category")).data;
+
+
 
 export function AdminDashboard() {
+    const results = useQueries({
+      queries: [
+        {
+          queryKey: ["totalRevenue"],
+          queryFn: fetchTotalRevenue,
+          staleTime: 1000 * 60 * 5,
+          refetchOnWindowFocus: false,
+        },
+        {
+          queryKey: ["totalOrders"],
+          queryFn: fetchTotalOrders,
+          staleTime: 1000 * 60 * 5,
+          refetchOnWindowFocus: false,
+        },
+        // {
+        //   queryKey: ["totalCustomers"],
+        //   queryFn: fetchTotalCustomers,
+        //   staleTime: 1000 * 60 * 5,
+        //   refetchOnWindowFocus: false,
+        // },
+        {
+          queryKey: ["totalProducts"],
+          queryFn: fetchTotalProducts,
+          staleTime: 1000 * 60 * 5,
+          refetchOnWindowFocus: false,
+        },
+        {
+          queryKey: ["totalPendingDeliveries"],
+          queryFn: getTotalPendingDeliveries,
+          staleTime: 1000 * 60 * 5,
+          refetchOnWindowFocus: false,
+        },
+        {
+          queryKey: ["recentOrders"],
+          queryFn: getRecentOrders,
+          staleTime: 1000 * 60 * 5,
+          refetchOnWindowFocus: false,
+        },
+        {
+          queryKey: ["topCategories"],
+          queryFn: getTopCategories,
+          staleTime: 1000 * 60 * 5,
+          refetchOnWindowFocus: false,
+        },
+      ]})
+      
+      const [totalRevenue, totalOrders,  totalProducts, totalPendingDeliveries, RecentOrders, topCategories] = results;
+
   // Mock data - in real app, this would come from your API
   const stats = [
     {
       title: 'Total Products',
-      value: '324',
+      value: `${totalProducts?.data?.totalProducts || 0}`,
       change: '+12',
       icon: Package,
       color: 'text-primary'
     },
     {
       title: 'Total Orders',
-      value: '1,429',
+      value: `${totalOrders?.data?.totalOrders || 0}`,
       change: '+89',
       icon: ShoppingCart,
       color: 'text-accent'
     },
     {
       title: 'Revenue',
-      value: '$45,239',
+      value: `${totalRevenue?.data?.totalRevenue || 0}`,
       change: '+23%',
       icon: DollarSign,
       color: 'text-success'
     },
     {
-      title: 'Pending Deliveries',
-      value: '23',
+      title: 'Pending Deliveries (Unassigned)',
+      value: `${totalPendingDeliveries?.data?.totalPendingDeliveries || 0}`,
       change: '-5',
       icon: Truck,
       color: 'text-warning'
     }
   ];
 
-  const recentOrders = [
-    {
-      id: 'ORD-001',
-      customer: 'John Doe',
-      amount: '$89.99',
-      status: 'processing',
-      date: '2024-01-15'
-    },
-    {
-      id: 'ORD-002',
-      customer: 'Jane Smith',
-      amount: '$156.50',
-      status: 'shipped',
-      date: '2024-01-15'
-    },
-    {
-      id: 'ORD-003',
-      customer: 'Mike Johnson',
-      amount: '$234.75',
-      status: 'delivered',
-      date: '2024-01-14'
-    },
-    {
-      id: 'ORD-004',
-      customer: 'Sarah Wilson',
-      amount: '$67.25',
-      status: 'pending',
-      date: '2024-01-14'
-    }
-  ];
+  // normalize recent orders data
+  const recentOrders = RecentOrders.data?.map((order: any) => ({
+    id: order.id,
+    customer: order.user.full_name,
+    amount: order.items.reduce((sum: number, item: any) => sum + item.line_total, 0).toFixed(2),
+    status: order.delivery.status,
+    date: order.placed_at
+  })) || [];
+
+
+  // const recentOrders = [
+  //   {
+  //     id: 'ORD-001',
+  //     customer: 'John Doe',
+  //     amount: '$89.99',
+  //     status: 'processing',
+  //     date: '2024-01-15'
+  //   },
+  //   {
+  //     id: 'ORD-002',
+  //     customer: 'Jane Smith',
+  //     amount: '$156.50',
+  //     status: 'shipped',
+  //     date: '2024-01-15'
+  //   },
+  //   {
+  //     id: 'ORD-003',
+  //     customer: 'Mike Johnson',
+  //     amount: '$234.75',
+  //     status: 'delivered',
+  //     date: '2024-01-14'
+  //   },
+  //   {
+  //     id: 'ORD-004',
+  //     customer: 'Sarah Wilson',
+  //     amount: '$67.25',
+  //     status: 'pending',
+  //     date: '2024-01-14'
+  //   }
+  // ];
+
+
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
@@ -119,12 +199,6 @@ export function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">
-                <span className={stat.change.startsWith('+') ? 'text-success' : 'text-destructive'}>
-                  {stat.change}
-                </span>{' '}
-                from last month
-              </p>
             </CardContent>
           </Card>
         ))}
@@ -151,7 +225,7 @@ export function AdminDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentOrders.map((order) => (
+                {recentOrders.map((order: any) => (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">{order.id}</TableCell>
                     <TableCell>{order.customer}</TableCell>
@@ -181,48 +255,24 @@ export function AdminDashboard() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Order Completion Rate</span>
-                <span className="font-medium">94%</span>
+                <span className="font-medium">
+                  {totalOrders?.data?.totalOrders ? `${((totalOrders.data.totalOrders - totalPendingDeliveries.data.totalPendingDeliveries) / totalOrders.data.totalOrders * 100).toFixed(2)}%` : '0%'}
+                </span>
               </div>
               <div className="w-full bg-muted rounded-full h-2">
                 <div className="bg-success h-2 rounded-full" style={{ width: '94%' }}></div>
               </div>
             </div>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Customer Satisfaction</span>
-                <span className="font-medium">4.8/5</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div className="bg-primary h-2 rounded-full" style={{ width: '96%' }}></div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">On-time Delivery</span>
-                <span className="font-medium">91%</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div className="bg-accent h-2 rounded-full" style={{ width: '91%' }}></div>
-              </div>
-            </div>
-
             <div className="pt-4 border-t">
               <div className="text-sm text-muted-foreground mb-2">Top Categories</div>
               <div className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span>Electronics</span>
-                  <span className="text-muted-foreground">34%</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Vegetables</span>
-                  <span className="text-muted-foreground">28%</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Crops</span>
-                  <span className="text-muted-foreground">22%</span>
-                </div>
+                {topCategories.data?.map((category: any) => (
+                  <div key={category.category} className="flex justify-between text-sm">
+                    <span>{category.category}</span>
+                    <span className="text-muted-foreground">${category.totalrevenue.toFixed(2)}</span>
+                    
+                  </div>
+                ))}
               </div>
             </div>
           </CardContent>

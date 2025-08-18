@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, ShoppingCart, Star } from "lucide-react";
+import { Search, ShoppingCart } from "lucide-react";
 import axios from "@/lib/axios";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
@@ -89,20 +89,15 @@ export function ProductCatalog() {
         .map((p: any) => ({
           ...p,
           inStock: p.stock > 0,
-          cartData: cartData?.items.find((c: CartItem) => c.productId === p.id) || null,
+          cartData: cartData?.[0]?.items.find((c: CartItem) => c.productId === p.id) || null,
           image: p.imagesURL[0]?.image_url || "/placeholder.svg",
           description: p.description,
-          rating: p.rating || 4.0,
-          reviews: p.reviews || 0,
         }))
         .filter((p: any) => p.is_active !== false);
       console.log("Fetched products:", ValidProduct);
       return ValidProduct;
     },
     initialData: products,
-    // staleTime: 1000 * 60, // 1 minute
-    // cacheTime: 1000 * 60 * 2, // 2 minutes
-    // refetchOnWindowFocus: false,
   });
 
 
@@ -160,8 +155,8 @@ export function ProductCatalog() {
           return a.price - b.price;
         case "price-high":
           return b.price - a.price;
-        case "rating":
-          return (b.rating || 0) - (a.rating || 0);
+        // case "rating":
+        //   return (b.rating || 0) - (a.rating || 0);
         default:
           return a.name.localeCompare(b.name);
       }
@@ -231,7 +226,6 @@ export function ProductCatalog() {
             <SelectItem value="name">Name</SelectItem>
             <SelectItem value="price-low">Price: Low to High</SelectItem>
             <SelectItem value="price-high">Price: High to Low</SelectItem>
-            <SelectItem value="rating">Rating</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -262,17 +256,6 @@ export function ProductCatalog() {
               <CardDescription>{product.description}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center space-x-2 mb-3">
-                <div className="flex items-center">
-                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <span className="text-sm font-medium ml-1">
-                    {product.rating}
-                  </span>
-                </div>
-                <span className="text-sm text-gray-600">
-                  ({product.reviews} reviews)
-                </span>
-              </div>
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">

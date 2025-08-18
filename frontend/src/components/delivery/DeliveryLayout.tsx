@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { authService } from '@/lib/auth';
 import { 
@@ -11,6 +11,7 @@ import {
   Bell
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import type { User } from '@/types/type';
 
 interface DeliveryLayoutProps {
   children: ReactNode;
@@ -18,9 +19,24 @@ interface DeliveryLayoutProps {
 
 export function DeliveryLayout({ children }: DeliveryLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const user = authService.getCurrentUser();
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const u = await authService?.getCurrentUser();
+      if (active) {
+        setUser(u);
+        setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleLogout = async () => {
     await authService.logout();
@@ -30,6 +46,14 @@ export function DeliveryLayout({ children }: DeliveryLayoutProps) {
     });
     navigate('/login');
   };
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Loading...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   // Mock pending deliveries count
   const pendingCount = 1;
@@ -47,7 +71,7 @@ export function DeliveryLayout({ children }: DeliveryLayoutProps) {
               </div>
               <div>
                 <span className="font-bold text-lg">Delivery Hub</span>
-                <div className="text-xs text-muted-foreground">Welcome, {user?.name}</div>
+                <div className="text-xs text-muted-foreground">Welcome, {user?.full_name}</div>
               </div>
             </div>
 

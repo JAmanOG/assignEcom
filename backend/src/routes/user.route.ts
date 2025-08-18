@@ -162,8 +162,9 @@ router.put("/change-password", authMiddleware, changePassword);
 router.get("/me", authMiddleware, getCurrentUser);
 router.get("/users", authMiddleware, roleMiddleware(["ADMIN"]), listUsers);
 router.post("/rotate-refresh-token", authMiddleware, rotateRefreshToken);
-router.post("/admin-create", createAdminUser);
 
-router.post("/create-delivery-partner", createDeliveryPartner);
+// Admin and Delivery Partner creation routes
+// router.post("/admin-create", createAdminUser);
+// router.post("/create-delivery-partner", createDeliveryPartner);
 
 export default router;

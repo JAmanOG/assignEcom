@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -77,7 +77,9 @@ interface OrderUI {
 
 const mockOrders: OrderUI[] = [];
 
-const statusColors: Record<OrderStatus, string> = {
+type BadgeVariant = "default" | "destructive" | "success" | "outline" | "secondary";
+
+const statusColors: Record<OrderStatus, BadgeVariant> = {
   PENDING: "secondary",
   CONFIRMED: "default",
   PROCESSING: "secondary",
@@ -86,7 +88,7 @@ const statusColors: Record<OrderStatus, string> = {
   CANCELLED: "destructive",
 };
 
-const paymentStatusColors: Record<PaymentStatus, string> = {
+const paymentStatusColors: Record<PaymentStatus, BadgeVariant> = {
   UNPAID: "secondary",
   PAID: "default",
   REFUNDED: "secondary",
@@ -102,7 +104,6 @@ export function OrderManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<OrderUI | null>(null);
-  const [isfilitering, setIsFiltering] = useState(false);
   // Fetch orders (assumes API returns { orders: OrderUI[] } or array directly)
   const ordersQuery = useQuery<OrderUI[]>({
     queryKey: ["orders"],
@@ -220,7 +221,7 @@ export function OrderManagement() {
       toast({ title: "Success", description: "Order status updated" });
     },
     onError: (err: AxiosError) => {
-      toast({ title: "Error", description: "Failed to update order status" });
+      toast({ title: "Error", description: `Failed to update order status ${err.message}` });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });
@@ -640,7 +641,6 @@ export function OrderManagement() {
                                       Assigned to:
                                     </span>
                                     <div>
-                                      {console.log(selectedOrder)}
                                       {selectedOrder.deliveryPersonnel.name}
                                     </div>
                                   </div>
@@ -662,16 +662,6 @@ export function OrderManagement() {
                     className="text-center text-muted-foreground"
                   >
                     No orders found
-                  </TableCell>
-                </TableRow>
-              )}
-              {isfilitering && (
-                <TableRow>
-                  <TableCell
-                    colSpan={9}
-                    className="text-center text-muted-foreground"
-                  >
-                    Filtering orders...
                   </TableCell>
                 </TableRow>
               )}

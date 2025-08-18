@@ -181,6 +181,29 @@ const router = Router();
  *           application/json:
  *             schema: { $ref: '#/components/schemas/GenericMessageResponse' }
  *       404: { $ref: '#/components/responses/NotFoundError' }
+ * /api/orders/cart/{cartId}/order:
+ *   post:
+ *     tags: [Orders]
+ *     summary: Place an order directly from an existing cart (Customer only)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: cartId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       201:
+ *         description: Order created from cart
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message: { type: string }
+ *                 order: { $ref: '#/components/schemas/Order' }
+ *       400: { $ref: '#/components/responses/ValidationError' }
+ *       401: { $ref: '#/components/responses/UnauthorizedError' }
+ *       404: { $ref: '#/components/responses/NotFoundError' }
  */
 
 router.get("/admin/orders", authMiddleware, roleMiddleware(["ADMIN"]), getAllOrders);

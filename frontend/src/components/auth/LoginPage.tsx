@@ -56,11 +56,30 @@ export function LoginPage() {
     }
   };
 
-  const quickLogin = (email: string) => {
-    setEmail(email);
-    setPassword('password');
-  };
+  const AccDic: { [key: string]: { email: string; password: string } } = {
+    admin: {
+      email: 'admin@gmail.com',
+      password: 'admin@123',
+    },
+    customer: {
+      email: 'jaman0120@gmail.com',
+      password: 'Aman@123',
+    },
+    delivery: {
+      email: 'aman@delivery.com',
+      password: 'aman@123',
+    },
+  }
 
+  const quickLogin = (role:string) => {
+    if (AccDic[role]) {
+      setEmail(AccDic[role].email);
+      setPassword(AccDic[role].password);
+    } else {
+      console.error('Invalid email');
+      // Optionally handle the error in the UI
+    }
+  };
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-md animate-fade-in">
@@ -107,6 +126,16 @@ export function LoginPage() {
                 Sign In
               </Button>
             </form>
+            <div className="text-sm text-muted-foreground text-center">
+              Don't have an account?{' '}
+              <Button 
+                variant="link" 
+                className="p-0 underline" 
+                onClick={() => navigate('/register')}
+              >
+                Sign Up
+              </Button>
+            </div>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -120,32 +149,32 @@ export function LoginPage() {
             <div className="grid gap-2">
               <Button
                 variant="outline"
-                onClick={() => quickLogin('admin@store.com')}
+                onClick={() => quickLogin('admin')}
                 className="w-full justify-start"
               >
                 <div className="text-left">
                   <div className="font-medium">Admin Account</div>
-                  <div className="text-xs text-muted-foreground">admin@store.com</div>
+                  <div className="text-xs text-muted-foreground">admin@gmail.com</div>
                 </div>
               </Button>
               <Button
                 variant="outline" 
-                onClick={() => quickLogin('customer@example.com')}
+                onClick={() => quickLogin('customer')}
                 className="w-full justify-start"
               >
                 <div className="text-left">
                   <div className="font-medium">Customer Account</div>
-                  <div className="text-xs text-muted-foreground">customer@example.com</div>
+                  <div className="text-xs text-muted-foreground">jaman0120@gmail.com</div>
                 </div>
               </Button>
               <Button
                 variant="outline"
-                onClick={() => quickLogin('delivery@store.com')}
+                onClick={() => quickLogin('delivery')}
                 className="w-full justify-start"
               >
                 <div className="text-left">
                   <div className="font-medium">Delivery Account</div>
-                  <div className="text-xs text-muted-foreground">delivery@store.com</div>
+                  <div className="text-xs text-muted-foreground">aman@delivery.com</div>
                 </div>
               </Button>
             </div>

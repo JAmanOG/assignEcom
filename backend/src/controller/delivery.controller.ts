@@ -6,6 +6,7 @@ import { allowedTransitions, deliveryToOrderStatusMap } from "../constant.js";
 const getAssignedDeliveries = async (req: Request, res: Response) => {
     const deliveryPartnerId = req.user?.id;
 
+    console.log("Fetching assigned deliveries for delivery partner:", deliveryPartnerId);
     if (!deliveryPartnerId) {
         return res.status(400).json({ message: "Delivery Partner ID is required" });
     }
@@ -34,7 +35,7 @@ const getAssignedDeliveries = async (req: Request, res: Response) => {
         });
 
         if (deliveries.length === 0) {
-            return res.status(404).json({ message: "No assigned deliveries found" });
+            return res.status(200).json({ message: "No assigned deliveries found" });
         }
 
         return res.status(200).json({ message: "Assigned deliveries fetched successfully", deliveries });

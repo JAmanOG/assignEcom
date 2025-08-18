@@ -17,7 +17,7 @@ const swaggerOptions = {
     servers: [
       { url: "http://localhost:3000", description: "Local" },
     ],
-    components: { }, // central components moved to docs/openapi.ts
+    components: { },
   },
   apis: ["./src/routes/*.ts", "./src/docs/*.ts"],
 };

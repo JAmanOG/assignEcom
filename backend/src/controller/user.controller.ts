@@ -11,7 +11,6 @@ import {
 } from "../helper/helper.js";
 import type { Request, Response } from "express";
 import type { Role } from "../types/type.js";
-import { Env } from "../config.js";
 
 // registering a new user
 const registerUser = async (req: Request, res: Response) => {
@@ -55,17 +54,17 @@ const registerUser = async (req: Request, res: Response) => {
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: Env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-
+    
     // setting the access token
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: Env.NODE_ENV === "production",
-      sameSite: "lax", // changed from "strict"
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       path: "/",
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
@@ -96,7 +95,7 @@ const rotateRefreshToken = async (req: Request, res: Response) => {
   try {
     const decoded = jwt.verify(
       refreshToken,
-      Env.JWT_REFRESH_SECRET as string
+      process.env.JWT_REFRESH_SECRET as string
     ) as { id: string };
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
 
@@ -116,15 +115,15 @@ const rotateRefreshToken = async (req: Request, res: Response) => {
 
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
-      secure: Env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.cookie("accessToken", newAccessToken, {
       httpOnly: true,
-      secure: Env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 60 * 60 * 1000,
     });
 
@@ -214,7 +213,7 @@ const loginUser = async (req: Request, res: Response) => {
     // setting the refresh token in the client's cookies
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: Env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
 
@@ -224,7 +223,7 @@ const loginUser = async (req: Request, res: Response) => {
     // setting the access token in the client's cookies
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: Env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
 
@@ -250,33 +249,26 @@ const loginUser = async (req: Request, res: Response) => {
 // logging out the user
 const logoutUser = async (req: Request, res: Response) => {
   const { refreshToken } = req.cookies;
-  if (!refreshToken) {
-    return res.status(401).json({ message: "No refresh token provided" });
-  }
-
   try {
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as string) as {
-      id: string;
-    };
-    await prisma.user.update({
-      where: { id: decoded.id },
-      data: { storedRefreshToken: null },
-    });
-
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: Env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
-
-    // TODO: have to invalidate the access token
+    if (refreshToken) {
+      try {
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as string) as { id: string };
+        await prisma.user.update({
+          where: { id: decoded.id },
+            data: { storedRefreshToken: null },
+        });
+      } catch (error) {
+        console.error("Invalid refresh token:", error);
+      }
+    }
+    res.clearCookie("refreshToken");
+    res.clearCookie("accessToken");
     return res.status(200).json({ message: "Logout successful" });
   } catch (error) {
     console.error("Error logging out user:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 // fetching the current user login
 const getCurrentUser = async (req: Request, res: Response) => {
   const userId: string = req.user?.id || "";
@@ -510,7 +502,7 @@ const createDeliveryPartner = async (req: Request, res: Response) => {
     // setting the refresh token in the client's cookies
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: Env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -518,7 +510,7 @@ const createDeliveryPartner = async (req: Request, res: Response) => {
     // setting the access token in the client's cookies
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: Env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 1000, // 1 hour
     });

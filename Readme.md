@@ -224,6 +224,3 @@ Add Winston / Pino logger abstraction; integrate with a log aggregator (e.g., EL
 
 ## 19. License
 Add your chosen license here (e.g., MIT).
-
----
-Generated documentation baseline. Keep this file updated as features evolve.

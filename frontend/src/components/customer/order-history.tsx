@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Eye, Package, Truck, CheckCircle, MapPin } from "lucide-react"
+import { Eye, Package, Truck, CheckCircle } from "lucide-react"
 import type { Order } from '@/types/type'
 import axios from "@/lib/axios";
 import { useQuery } from "@tanstack/react-query";
