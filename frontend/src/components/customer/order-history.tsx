@@ -16,6 +16,7 @@ export function OrderHistory() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
 
+  
   const { data: orders = [], isLoading, isError } = useQuery({
     queryKey: ["ordered"],
     queryFn: async () => {
@@ -23,8 +24,7 @@ export function OrderHistory() {
       // console.log("Fetched orders:", response.data.orders);
       return response.data.orders as Order[];
     },
-    initialData: [],
-    staleTime: 1000 * 60 * 1
+    staleTime: 1000 * 60
   });
 
   if (isLoading) return <div>Loading...</div>
@@ -95,42 +95,56 @@ export function OrderHistory() {
         {filteredOrders.map((order) => {
           const total = order.items.reduce((sum, item) => sum + item.line_total, 0)
           return (
-            <Card key={order.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="flex items-center space-x-2">
-                      <span>{order.id}</span>
-                      <Badge variant={getStatusColor(order.status)} className="flex items-center space-x-1">
-                        {getStatusIcon(order.status)}
-                        <span className="capitalize">{order.status.toLowerCase()}</span>
-                      </Badge>
-                    </CardTitle>
-                    <CardDescription>Ordered on {new Date(order.placed_at).toLocaleDateString()}</CardDescription>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold">${total.toFixed(2)}</p>
-                    <Button variant="outline" size="sm" onClick={() => viewOrderDetails(order)}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Details
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <h4 className="font-medium">Items ({order.items.length}):</h4>
-                  {order.items.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <span>
-                        {item.product_name} × {item.quantity}
-                      </span>
-                      <span>${item.line_total.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+<Card key={order.id} className="p-3 sm:p-4">
+  <CardHeader className="p-0">
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+      <div className="flex flex-col">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+          <span className="truncate max-w-[150px] sm:max-w-none">
+            {order.id.slice(0, 6)}...{order.id.slice(-4)}
+          </span>
+          <Badge
+            variant={getStatusColor(order.status)}
+            className="flex items-center gap-1 px-2 py-0.5 text-xs sm:text-sm"
+          >
+            {getStatusIcon(order.status)}
+            <span className="capitalize">{order.status.toLowerCase()}</span>
+          </Badge>
+        </CardTitle>
+        <CardDescription className="text-xs sm:text-sm">
+          Ordered on {new Date(order.placed_at).toLocaleDateString()}
+        </CardDescription>
+      </div>
+
+      <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-1">
+        <p className="text-lg sm:text-2xl font-bold">${total.toFixed(2)}</p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-xs sm:text-sm"
+          onClick={() => viewOrderDetails(order)}
+        >
+          <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+          View
+        </Button>
+      </div>
+    </div>
+  </CardHeader>
+
+  <CardContent className="mt-3 p-0">
+    <div className="space-y-1">
+      <h4 className="font-medium text-sm">Items ({order.items.length}):</h4>
+      {order.items.map((item) => (
+        <div key={item.id} className="flex justify-between text-xs sm:text-sm">
+          <span>
+            {item.product_name} × {item.quantity}
+          </span>
+          <span>${item.line_total.toFixed(2)}</span>
+        </div>
+      ))}
+    </div>
+  </CardContent>
+</Card>
           )
         })}
       </div>
