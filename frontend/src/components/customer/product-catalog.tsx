@@ -65,11 +65,11 @@ export function ProductCatalog() {
     queryKey: ["cart"],
     queryFn: async () => {
       const response = await axios.get("/api/cart");
-      console.log("Fetched cart data:", response.data.cart);
+      // console.log("Fetched cart data:", response.data.cart);
       return response.data.cart;
     },
     initialData: [],
-    // staleTime: 1000 * 60, // 1 minute
+    staleTime: 1000 * 60, // 1 minute
     // refetchOnWindowFocus: false,
   });
 
@@ -98,7 +98,7 @@ export function ProductCatalog() {
           description: p.description,
         }))
         .filter((p: any) => p.is_active !== false);
-      console.log("Fetched products:", ValidProduct);
+      // console.log("Fetched products:", ValidProduct);
       return ValidProduct;
     },
     initialData: products,
@@ -133,7 +133,6 @@ export function ProductCatalog() {
     ...Array.from(
       new Map(
         productsData?.map((p) => {
-          // console.log("p", p);
           return [p.category.id, p.category];
         })
       ).values()
@@ -172,7 +171,7 @@ export function ProductCatalog() {
       };
 
       addProductMutation.mutate(cartItem);
-      console.log("Adding to cart:", cartItem);
+      // console.log("Adding to cart:", cartItem);
     } catch (error: unknown) {
       console.error("Error adding to cart:", error);
       toast({
@@ -185,7 +184,7 @@ export function ProductCatalog() {
 
   if (isLoading) return <p>Loading products...</p>;
   if (error) {
-    console.log(error);
+    // console.log(error);
     return <p className="text-red-500">Failed to fetch products.</p>;
   }
 

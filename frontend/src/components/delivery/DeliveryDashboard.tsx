@@ -70,7 +70,7 @@ export function DeliveryDashboard() {
     queryKey: ["deliveries"],
     queryFn: async () => {
       const res = await axios.get("/api/delivery/orders/get-assigned-delivery");
-      console.log("Fetched deliveries:", res.data);
+      // console.log("Fetched deliveries:", res.data);
       const payload = res.data?.deliveries ?? res.data ?? [];
       return payload as DeliveryType[];
     },

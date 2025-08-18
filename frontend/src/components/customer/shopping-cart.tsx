@@ -15,10 +15,21 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Minus, Plus, Trash2, ShoppingBag, CheckCircle, Badge, Truck, Package, Copy, Download } from "lucide-react";
+import {
+  Minus,
+  Plus,
+  Trash2,
+  ShoppingBag,
+  CheckCircle,
+  Badge,
+  Truck,
+  Package,
+  Copy,
+  Download,
+} from "lucide-react";
 import axios from "@/lib/axios";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { PhotoView } from "react-photo-view";
@@ -46,7 +57,7 @@ export function ShoppingCart() {
     queryKey: ["cart"],
     queryFn: async () => {
       const response = await axios.get("/api/cart");
-      console.log("Fetched cart data:", response.data.cart);
+      // console.log("Fetched cart data:", response.data.cart);
       setCartItems(response.data.cart.items);
       return response.data.cart;
     },
@@ -63,9 +74,9 @@ export function ShoppingCart() {
     },
     onMutate: async (updatedCart) => {
       await queryClient.cancelQueries({ queryKey: ["cart"] });
-  
+
       const previousCart = queryClient.getQueryData(["cart"]);
-  
+
       queryClient.setQueryData(["cart"], (old: any) => {
         return {
           ...old,
@@ -76,7 +87,7 @@ export function ShoppingCart() {
           ),
         };
       });
-  
+
       return { previousCart };
     },
     onError: (err, _newCart, context) => {
@@ -88,7 +99,7 @@ export function ShoppingCart() {
       });
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(["cart"], data); 
+      queryClient.setQueryData(["cart"], data);
       toast({
         title: "Cart updated",
         description: "Your cart has been successfully updated.",
@@ -99,20 +110,23 @@ export function ShoppingCart() {
 
   const getAddress = (data: Address) => {
     setSelectedAddress(data);
-    console.log("Selected address set to:", data);  
-  }
-
+    // console.log("Selected address set to:", data);
+  };
 
   const onOrderedMutation = useMutation({
     mutationFn: async (payload: { id: string; address_id: string | null }) => {
-      const response = await axios.post(`/api/orders/cart/${payload.id}/order`, { address_id: payload.address_id });
-      console.log("Order response:", response.data);
+      const response = await axios.post(
+        `/api/orders/cart/${payload.id}/order`,
+        { address_id: payload.address_id }
+      );
+      // console.log("Order response:", response.data);
       return response.data;
     },
     onSuccess: () => {
       toast({
         title: "Order placed successfully!",
-        description: "Your order has been placed and will be processed shortly.",
+        description:
+          "Your order has been placed and will be processed shortly.",
         variant: "success",
       });
       queryClient.invalidateQueries({ queryKey: ["cart"] });
@@ -134,28 +148,62 @@ export function ShoppingCart() {
         func(...args);
       }, delay);
     };
-  }
+  };
 
   const updateQuantity = debounce((id: string, newQuantity: number) => {
     if (newQuantity === 0) {
       removeItem(id);
       return;
     }
-  
+
     setCartItems((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, quantity: newQuantity } : item
       )
     );
 
-
     updateCartMutation.mutate({ id, quantity: newQuantity });
   }, 400);
-  const removeItem = (id: string) => {
-    setCartItems(
-      cartData.items.filter((item: CartItem) => item.id !== id)
-    );
-  };
+
+  const deleteItemMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await axios.delete(`/api/cart/${id}`);
+      return response.data;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["cart"] });
+      const previousCart = queryClient.getQueryData(["cart"]);
+      queryClient.setQueryData(["cart"], (old: any) => {
+        return {
+          ...old,
+          items: old.items.filter((item: CartItem) => item.id !== id),
+        };
+      });
+      return { previousCart };
+    },
+    
+    onError: (err, _id, context) => {
+      queryClient.setQueryData(["cart"], context?.previousCart);
+      toast({
+        title: "Error deleting item",
+        description: `Failed to delete item: ${err.message}`,
+        variant: "destructive",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      toast({
+        title: "Item deleted",
+        description: "The item has been successfully removed from your cart.",
+        variant: "success",
+      });
+    },
+  });
+
+  const removeItem = debounce((id: string) => {
+    deleteItemMutation.mutate(id);
+    setCartItems(cartData.items.filter((item: CartItem) => item.id !== id))
+  },300);
 
   const continueShopping = () => {
     // Navigate back to product catalog
@@ -177,37 +225,36 @@ export function ShoppingCart() {
       return;
     }
 
-    const payload ={
+    const payload = {
       id: cartData.id,
       address_id: selectedAddress?.id || null,
-    }
+    };
     // Here you would typically redirect to a checkout page or process the order
     onOrderedMutation.mutate(payload);
-    console.log("Proceeding to checkout with items:", cartItems);
+    // console.log("Proceeding to checkout with items:", cartItems);
   };
-
 
   const OrderCompletedDialog = () => {
     const [isOpen, setIsOpen] = useState(false);
-  
+
     // Sample order data
     const orderData = {
-      orderNumber: '#ORD-8901',
+      orderNumber: "#ORD-8901",
       total: 249.99,
       itemCount: 5,
-      estimatedDelivery: 'Aug 22, 2024',
-      trackingNumber: 'TRK123456789'
+      estimatedDelivery: "Aug 22, 2024",
+      trackingNumber: "TRK123456789",
     };
-  
+
     return (
       <div className="p-8 bg-gray-50 min-h-screen">
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-          <Button className="w-full" onClick={proceedToCheckout}>
-                Proceed to Checkout
-              </Button>
+            <Button className="w-full" onClick={proceedToCheckout}>
+              Proceed to Checkout
+            </Button>
           </DialogTrigger>
-          
+
           <DialogContent className="max-w-md">
             {/* Success Header */}
             <div className="text-center pb-4">
@@ -218,27 +265,33 @@ export function ShoppingCart() {
                 <DialogTitle className="text-2xl font-bold text-gray-900">
                   Order Completed!
                 </DialogTitle>
-                <p className="text-gray-600 text-sm">Thank you for your purchase</p>
+                <p className="text-gray-600 text-sm">
+                  Thank you for your purchase
+                </p>
               </DialogHeader>
             </div>
-  
+
             <div className="space-y-4">
               {/* Order Summary */}
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-semibold text-gray-900">{orderData.orderNumber}</span>
+                  <span className="font-semibold text-gray-900">
+                    {orderData.orderNumber}
+                  </span>
                   <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
                     Confirmed
                   </Badge>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">{orderData.itemCount} items</span>
+                  <span className="text-sm text-gray-600">
+                    {orderData.itemCount} items
+                  </span>
                   <span className="text-xl font-bold text-gray-900">
                     ${orderData.total.toFixed(2)}
                   </span>
                 </div>
               </div>
-  
+
               {/* Delivery Info */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between py-2">
@@ -250,9 +303,9 @@ export function ShoppingCart() {
                     {orderData.estimatedDelivery}
                   </span>
                 </div>
-                
+
                 <Separator />
-                
+
                 <div className="flex items-center justify-between py-2">
                   <div className="flex items-center">
                     <Package size={16} className="mr-2 text-blue-600" />
@@ -268,20 +321,20 @@ export function ShoppingCart() {
                   </div>
                 </div>
               </div>
-  
+
               {/* Action Buttons */}
               <div className="space-y-2 pt-2">
                 <Button className="w-full bg-blue-600 hover:bg-blue-700">
                   <Truck size={16} className="mr-2" />
                   Track Order
                 </Button>
-                
+
                 <Button variant="outline" className="w-full">
-                  <Download  size={16} className="mr-2" />
+                  <Download size={16} className="mr-2" />
                   Download Receipt
                 </Button>
               </div>
-  
+
               {/* Footer */}
               <div className="text-center pt-2 border-t">
                 <p className="text-xs text-gray-500">
@@ -294,7 +347,6 @@ export function ShoppingCart() {
       </div>
     );
   };
-  
 
   if (cartItems.length === 0) {
     return (
@@ -320,12 +372,12 @@ export function ShoppingCart() {
     );
   }
 
-  if (isCartLoading){
-    return(
+  if (isCartLoading) {
+    return (
       <div className="flex items-center justify-center h-screen">
         <p className="text-gray-600">Loading your cart...</p>
       </div>
-    )
+    );
   }
 
   if (cartError) {
@@ -333,7 +385,9 @@ export function ShoppingCart() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
-          <p className="text-red-600">Error loading cart: {cartError.message}</p>
+          <p className="text-red-600">
+            Error loading cart: {cartError.message}
+          </p>
         </div>
       </div>
     );
@@ -360,7 +414,13 @@ export function ShoppingCart() {
                     key={item.id}
                     className="flex items-center space-x-4 py-4 border-b last:border-b-0"
                   >
-                    <PhotoView key={item.id} src={item.product?.imagesURL?.[0].image_url || "/placeholder.svg"}>
+                    <PhotoView
+                      key={item.id}
+                      src={
+                        item.product?.imagesURL?.[0].image_url ||
+                        "/placeholder.svg"
+                      }
+                    >
                       <img
                         src={
                           item.product?.imagesURL?.[0].image_url ||
@@ -471,19 +531,11 @@ export function ShoppingCart() {
               {/* <Button className="w-full" onClick={proceedToCheckout}>
                 Proceed to Checkout
               </Button> */}
-              
-              {
-                !selectedAddress &&(
-                  <AddressSelectionDialog
-                  onAddressSelect={getAddress}
-                  />
-                )
-              }
-              {
-                selectedAddress && (
-              <OrderCompletedDialog />
-                )
-              }
+
+              {!selectedAddress && (
+                <AddressSelectionDialog onAddressSelect={getAddress} />
+              )}
+              {selectedAddress && <OrderCompletedDialog />}
             </CardContent>
           </Card>
         </div>

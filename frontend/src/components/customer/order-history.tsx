@@ -20,10 +20,11 @@ export function OrderHistory() {
     queryKey: ["ordered"],
     queryFn: async () => {
       const response = await axios.get("/api/orders");
-      console.log("Fetched orders:", response.data.orders);
+      // console.log("Fetched orders:", response.data.orders);
       return response.data.orders as Order[];
     },
     initialData: [],
+    staleTime: 1000 * 60 * 1
   });
 
   if (isLoading) return <div>Loading...</div>
