@@ -1,6 +1,8 @@
 # AssignEcom – Full‑Stack E‑Commerce Platform
 
-A monorepo containing a TypeScript / Node.js (Express 5) backend and a React 19 + Vite + TailwindCSS frontend. Provides user, product, cart, order, delivery, inventory, and category management with JWT auth, role based access control, Swagger docs, and Prisma ORM (PostgreSQL).
+A monorepo containing a TypeScript / Node.js (Express 5) backend and a React 19 + Vite + TailwindCSS frontend. Provides user, product, cart, order, delivery, inventory, and category management with JWT auth, role-based access control, Swagger docs, and Prisma ORM (PostgreSQL).
+
+## watch Demo here [Demo](https://drive.google.com/file/d/1pB_50vg9cP5BQtv7cVPsTiqB7WqfHQoH/view?usp=sharing) - deployed but azure credits get over today morning
 
 ## 1. Features (Current)
 - Authentication & Authorization
