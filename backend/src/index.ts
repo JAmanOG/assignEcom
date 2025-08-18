@@ -15,7 +15,8 @@ const swaggerOptions = {
       description: "Comprehensive API documentation for the E-Commerce platform.",
     },
     servers: [
-      { url: "http://localhost:3000", description: "Local" },
+        { url: "https://assignecom.onrender.com", description: "Production" },
+        { url: "http://localhost:3000", description: "Development" },
     ],
     components: { },
   },
