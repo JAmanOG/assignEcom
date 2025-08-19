@@ -38,16 +38,37 @@ import { useToast } from "@/hooks/use-toast";
 import AddressSelectionDialog from "./component/addressSelection";
 import type { Address } from "@/types/type";
 
+
 type UpdateCartPayload = {
   id: string;
   quantity: number;
 };
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
+
+const loadRazorpayScript = () =>
+  new Promise((resolve, reject) => {
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => reject(new Error("Razorpay SDK failed to load"));
+    document.body.appendChild(script);
+  });
 
 export function ShoppingCart() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+
+
+  const [isPaymentOnline, setIsPaymentOnline] = useState<string>("none");
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   const {
     data: cartData,
@@ -201,13 +222,16 @@ export function ShoppingCart() {
     window.location.href = "/shop";
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.total_price, 0);
-  const shipping = subtotal > 100 ? 0 : 9.99;
+  const subtotal = cartItems?.reduce(
+    (sum, item) => sum + Number(item.total_price),
+    0
+  );
+    const shipping = subtotal > 100 ? 0 : 9.99;
   const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
 
   const proceedToCheckout = () => {
-    if (cartItems.length === 0) {
+    if (cartItems?.length === 0) {
       toast({
         title: "Cart is empty",
         description: "Please add items to your cart before proceeding.",
@@ -215,12 +239,174 @@ export function ShoppingCart() {
       });
       return;
     }
-
+    if (!selectedAddress) {
+      toast({
+        title: "Address required",
+        description: "Please select an address before proceeding.",
+        variant: "warning",
+      });
+      return;
+    }
+    if (isPaymentOnline === "none") {
+      toast({
+        title: "Payment method required",
+        description: "Please select a payment method before proceeding.",
+        variant: "warning",
+      });
+      return;
+    }
     const payload = {
       id: cartData.id,
       address_id: selectedAddress?.id || null,
     };
     onOrderedMutation.mutate(payload);
+  };
+
+  const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY || "";
+
+  const handleRazorpayPayment = async () => {
+    if (!cartData || !cartData.id) {
+      toast({
+        title: "Cart missing",
+        description: "No cart found",
+        variant: "warning",
+      });
+      return;
+    }
+    if (!selectedAddress) {
+      toast({
+        title: "Address required",
+        description: "Please select an address",
+        variant: "warning",
+      });
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+
+      const payload = {
+        address_id: selectedAddress?.id || null,
+        cartId: cartData.id,
+      };
+
+      // 1) Create server-side order (server computes totals)
+      const createResp = await axios.post("/api/orders/payment/place", payload);
+      console.log(createResp);
+      const { razorpayOrder, localOrderId, paymentId } = createResp.data;
+      console.log(
+        "razorpayOrder",
+        razorpayOrder,
+        "localOrderId",
+        localOrderId,
+        "paymentId",
+        paymentId
+      );
+
+      try {
+        await loadRazorpayScript();
+      } catch (err) {
+        console.error("Razorpay SDK load failed:", err);
+        toast({
+          title: "Payment error",
+          description: "Unable to load payment SDK",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+        return;
+      }
+
+      // 3) Build options
+      const options = {
+        key: RAZORPAY_KEY,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        name: "Your Store Name",
+        description: `Order #${localOrderId}`,
+        order_id: razorpayOrder.id,
+        notes: { cartId: cartData.id, localOrderId },
+        handler: async function (response: any) {
+          console.log(response);
+          // success handler — verify on server
+          try {
+            const validateRes = await axios.post(
+              "/api/orders/payment/validate",
+              {
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                paymentId,
+                localOrderId,
+                cartId: cartData.id,
+              }
+            );
+
+            console.log("validateRes: ", validateRes);
+
+            toast({
+              title: "Payment successful",
+              description: "Order confirmed",
+              variant: "success",
+            });
+            queryClient.invalidateQueries({ queryKey: ["cart"] });
+            // redirect or show order page
+            // window.location.href = `/order/${localOrderId}`;
+          } catch (err: any) {
+            console.error("Validation failed", err);
+            toast({
+              title: "Payment verification failed",
+              description:
+                err?.response?.data?.error || err.message || "Server error",
+              variant: "destructive",
+            });
+          } finally {
+            setIsProcessing(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            // user dismissed checkout UI
+            setIsProcessing(false);
+            toast({
+              title: "Payment cancelled",
+              description: "Payment dialog was closed",
+              variant: "warning",
+            });
+          },
+        },
+        prefill: {
+          name: "",
+          email: "",
+          contact: selectedAddress?.phone || "",
+        },
+      };
+
+      // 4) Open checkout and attach failure handler
+      const rzp = new (window as any).Razorpay(options);
+
+      // Optional: handle payment failure event
+      rzp.on &&
+        rzp.on("payment.failed", function (resp: any) {
+          console.error("Razorpay payment failed", resp);
+          toast({
+            title: "Payment failed",
+            description:
+              resp?.error?.description || "Payment could not be processed",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+        });
+
+      rzp.open();
+    } catch (err: any) {
+      console.error("Razorpay error", err);
+      toast({
+        title: "Payment error",
+        description: err?.message || "Unable to start payment",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    }
   };
 
   const OrderCompletedDialog = () => {
@@ -238,9 +424,24 @@ export function ShoppingCart() {
       <div className="p-8 bg-gray-50">
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className="w-full" onClick={proceedToCheckout}>
-              Proceed to Checkout
-            </Button>
+            {isPaymentOnline !== "none" &&
+              (isPaymentOnline === "online" ? (
+                <Button
+                  className="w-full"
+                  onClick={handleRazorpayPayment}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? "Processing..." : "Pay Online"}
+                </Button>
+              ) : (
+                <Button
+                  className="w-full"
+                  onClick={proceedToCheckout}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? "Processing..." : "Place Order"}
+                </Button>
+              ))}
           </DialogTrigger>
 
           <DialogContent className="max-w-md">
@@ -331,7 +532,7 @@ export function ShoppingCart() {
     );
   };
 
-  if (cartItems.length === 0) {
+  if (cartItems?.length === 0) {
     return (
       <div className="space-y-6 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div>
@@ -345,7 +546,9 @@ export function ShoppingCart() {
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               Your cart is empty
             </h3>
-            <p className="text-gray-600 mb-4">Add some products to get started!</p>
+            <p className="text-gray-600 mb-4">
+              Add some products to get started!
+            </p>
             <Button onClick={continueShopping}>Continue Shopping</Button>
           </CardContent>
         </Card>
@@ -366,7 +569,9 @@ export function ShoppingCart() {
       <div className="space-y-6 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
-          <p className="text-red-600">Error loading cart: {cartError.message}</p>
+          <p className="text-red-600">
+            Error loading cart: {cartError.message}
+          </p>
         </div>
       </div>
     );
@@ -376,7 +581,7 @@ export function ShoppingCart() {
     <div className="space-y-6 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
-        <p className="text-gray-600">{cartItems.length} items in your cart</p>
+        <p className="text-gray-600">{cartItems?.length} items in your cart</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -388,7 +593,7 @@ export function ShoppingCart() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {cartItems.map((item) => (
+                {cartItems?.map((item) => (
                   <div
                     key={item.id}
                     className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 py-4 border-b last:border-b-0 min-w-0"
@@ -396,21 +601,27 @@ export function ShoppingCart() {
                     <div className="flex items-start sm:items-center sm:space-x-4 min-w-0">
                       <PhotoView
                         src={
-                          item.product?.imagesURL?.[0].image_url || "/placeholder.svg"
+                          item.product?.imagesURL?.[0].image_url ||
+                          "/placeholder.svg"
                         }
                       >
                         <img
                           src={
-                            item.product?.imagesURL?.[0].image_url || "/placeholder.svg"
+                            item.product?.imagesURL?.[0].image_url ||
+                            "/placeholder.svg"
                           }
-                          alt={item.product_name}
+                          alt={item?.product_name}
                           className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded flex-shrink-0"
                         />
                       </PhotoView>
 
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium truncate">{item.product_name}</h3>
-                        <p className="text-sm text-gray-600">${item.unit_price}</p>
+                        <h3 className="font-medium truncate">
+                          {item?.product_name}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          ${item?.unit_price}
+                        </p>
                       </div>
                     </div>
 
@@ -420,14 +631,14 @@ export function ShoppingCart() {
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            updateQuantity(item.id, item.quantity - 1)
+                            updateQuantity(item.id, item?.quantity - 1)
                           }
                         >
                           <Minus className="h-4 w-4" />
                         </Button>
                         <Input
                           type="number"
-                          aria-label={`Quantity for ${item.product_name}`}
+                          aria-label={`Quantity for ${item?.product_name}`}
                           value={item.quantity}
                           onChange={(e) =>
                             updateQuantity(
@@ -481,29 +692,60 @@ export function ShoppingCart() {
             <CardContent className="space-y-4 lg:sticky lg:top-20">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>${subtotal?.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Shipping</span>
-                <span>{shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}</span>
+                <span>
+                  {shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Tax</span>
-                <span>${tax.toFixed(2)}</span>
+                <span>${tax?.toFixed(2)}</span>
               </div>
               <Separator />
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>${total?.toFixed(2)}</span>
               </div>
 
               {subtotal < 100 && (
                 <p className="text-sm text-gray-600">
-                  Add ${(100 - subtotal).toFixed(2)} more for free shipping!
+                  Add ${(100 - subtotal)?.toFixed(2)} more for free shipping!
                 </p>
               )}
+              {selectedAddress && (
+                <div className="payment-method-container mt-4 flex space-x-2">
+                  <h3 className="text-lg font-semibold">
+                    Select Payment Method
+                  </h3>
+                  <div className="payment-option flex items-center mt-3">
+                    <Input
+                      type="radio"
+                      name="paymentMethod"
+                      value="online"
+                      className="payment-radio"
+                      onChange={() => setIsPaymentOnline("online")}
+                    />
+                    <span className="ml-3 text-sm">Pay Online</span>
+                  </div>
+                  <div className="payment-option flex items-center mt-3">
+                    <Input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cod"
+                      className="payment-radio"
+                      onChange={() => setIsPaymentOnline("cod")}
+                    />
+                    <span className="ml-3 text-sm">Cash on Delivery</span>
+                  </div>
+                </div>
+              )}
 
-              {!selectedAddress && <AddressSelectionDialog onAddressSelect={getAddress} />}
+              {!selectedAddress && (
+                <AddressSelectionDialog onAddressSelect={getAddress} />
+              )}
               {selectedAddress && <OrderCompletedDialog />}
             </CardContent>
           </Card>

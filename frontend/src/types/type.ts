@@ -45,7 +45,7 @@ export type CartItem = {
   product_name: string;
   quantity: number;
   unit_price: number;
-  total_price: number;
+  total_price: number | string;
   created_at: string;
   updated_at: string;
   product?: Product;

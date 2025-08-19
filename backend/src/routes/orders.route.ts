@@ -3,7 +3,9 @@ import { authMiddleware } from "../middleware/auth.middleware.js";
 import { roleMiddleware } from "../middleware/role.middleware.js";
 import { validate } from "../middleware/validation.middleware.js";
 import { listUserOrdersQuerySchema, listAllOrdersQuerySchema, updateOrderStatusSchema, assignOrderSchema, placeOrderSchema, placeOrderFromCartSchema, idParamSchema, cartIdParamSchema } from "../validation/schemas.js";
-import {assignOrderToDelivery,getAllOrders,getOrderDetails,getUserOrders,placeOrder,updateOrderStatus,deleteOrder,placeOrderFromCart} from "../controller/orders.controller.js";
+import {assignOrderToDelivery,getAllOrders,getOrderDetails,getUserOrders,placeOrder,updateOrderStatus,deleteOrder,placeOrderFromCart,
+    paymentPlaceOrder,validateOrder,webhookHandler
+} from "../controller/orders.controller.js";
 
 const router = Router();
 
@@ -218,4 +220,9 @@ router.post("/", authMiddleware, roleMiddleware(["CUSTOMER"]), validate({ body: 
 router.post('/cart/:cartId/order', authMiddleware, roleMiddleware(["CUSTOMER"]), validate({ params: cartIdParamSchema, body: placeOrderFromCartSchema }), placeOrderFromCart);
 router.get("/:id", authMiddleware, roleMiddleware(["CUSTOMER"]), validate({ params: idParamSchema }), getOrderDetails);
 
+router.post("/payment/place", authMiddleware, roleMiddleware(["CUSTOMER"]), paymentPlaceOrder);
+
+router.post("/webhook", webhookHandler);
+
+router.post("/payment/validate", authMiddleware, roleMiddleware(["CUSTOMER"]), validateOrder);
 export default router;

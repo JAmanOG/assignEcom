@@ -5,8 +5,26 @@ import {
   adjustStock,
   returnStockFromOrder,
 } from "./inventory_transactions.controller.js";
+import Razorpay from "razorpay";
+import * as crypto from "crypto";
 
-// Place order
+const razorpayClient = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID || "",
+  key_secret: process.env.RAZORPAY_KEY_SECRET || "",
+});
+
+const paise = (num: number) => Math.round(num * 100);
+
+const genReceipt = (orderId: string) => {
+  const shortId = orderId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 12); // compact
+  const ts = Date.now().toString(36); // shorter than decimal
+  let receipt = `rc_${shortId}_${ts}`; // usually < 30 chars
+  if (receipt.length > 40) receipt = receipt.slice(0, 40);
+  return receipt;
+};
+
+
+// Place order COD this is 
 const placeOrder = async (req: Request, res: Response) => {
   const userId = req.user?.id;
   if (!userId) {
@@ -137,6 +155,279 @@ const placeOrder = async (req: Request, res: Response) => {
   }
 };
 
+const paymentPlaceOrder = async (req: Request, res: Response) => {
+  console.log("Placing the payment order")
+  const userId = req.user?.id;
+  const { address_id, cartId, currency = "INR",new_shipping_address } = req.body;
+  if (!userId) return res.status(401).json({ message: "Unauthorized" });
+  if (!cartId) return res.status(400).json({ message: "Cart ID is required" });
+
+  try {
+    // Use findFirst so we can check userId as well
+    const cart = await prisma.carts.findFirst({
+      where: { id: cartId, userId },
+      include: { items: { include: { product: true } }, user: true },
+    });
+
+    if (!cart) return res.status(404).json({ error: "Cart not found" });
+    if (!cart.items || cart.items.length === 0) return res.status(400).json({ error: "Cart is empty" });
+
+    let shippingAddressId: string;
+    if (new_shipping_address) {
+      const created = await prisma.shipping_address.create({
+        data: {
+          userId,
+          ship_name: new_shipping_address.recipient_name,
+          ship_phone: new_shipping_address.phone,
+          ship_address: new_shipping_address.address,
+            ship_city: new_shipping_address.city,
+            ship_state: new_shipping_address.state,
+            ship_zip: new_shipping_address.postal_code,
+            notes: new_shipping_address.notes || null,
+        },
+      });
+      shippingAddressId = created.id;
+    } else {
+      const addr = await prisma.address.findUnique({ where: { id: address_id } });
+      if (!addr || addr.userId !== userId) {
+        return res.status(404).json({ message: "Address not found" });
+      }
+      const created = await prisma.shipping_address.create({
+        data: {
+          userId,
+          ship_name: addr.recipient_name,
+          ship_phone: addr.phone,
+          ship_address: addr.address,
+          ship_city: addr.city,
+          ship_state: addr.state,
+          ship_zip: addr.postal_code,
+          notes: null,
+        },
+      });
+      shippingAddressId = created.id;
+    }
+
+
+    const subtotalFloat = cart.items.reduce((s, it) => s + Number(it.total_price), 0);
+    const shippingAmount = subtotalFloat > 100 ? 0 : 9.99;
+    const tax = subtotalFloat * 0.08;
+    const totalFloat = subtotalFloat + shippingAmount + tax;
+    const totalPaise = paise(totalFloat);
+
+    // Create Order server-side (PENDING, UNPAID)
+    const newOrder = await prisma.orders.create({
+      data: {
+        userId: cart.userId,
+        status: "PENDING",
+        payment_status: "UNPAID",
+        shipping_address_id: shippingAddressId,
+        items: {
+          create: cart.items.map((i) => ({
+            product_id: i.productId,
+            product_name: i.product_name,
+            unit_price: i.unit_price,
+            quantity: i.quantity,
+            line_total: i.total_price,
+          })),
+        },
+        shipping_amount: {
+          create: {
+            subtotal_amount: subtotalFloat,
+            shipping_amount: shippingAmount,
+            discount_amount: 0,
+            total_amount: totalFloat,
+          },
+        },
+      },
+      include: { items: true, shipping_amount: true },
+    });
+
+    // Create payments row locally
+    let receipt = genReceipt(newOrder.id);
+    if (process.env.NODE_ENV !== "production" && receipt.length > 40) {
+      console.warn("Receipt still >40 after generation (will be trimmed):", receipt);
+      receipt = receipt.slice(0, 40);
+    }
+
+    const paymentRecord = await prisma.payments.create({
+      data: {
+        orderId: newOrder.id,
+        cartId,
+        provider: "RAZORPAY",
+        receipt,
+        amount: totalPaise,
+        currency: "INR",
+        status: "CREATED",
+        metadata: { cartId },
+      },
+    });
+
+    // Create Razorpay order
+    let razorpayOrder;
+    try {
+      razorpayOrder = await razorpayClient.orders.create({
+        amount: totalPaise,
+        currency,
+        receipt,
+        notes: { orderId: newOrder.id, paymentId: paymentRecord.id },
+      });
+    } catch (err: any) {
+      // mark payment failed and return error
+      await prisma.payments.update({
+        where: { id: paymentRecord.id },
+        data: { status: "FAILED", metadata: { err: err?.message || String(err) } },
+      });
+      console.error("Razorpay order creation failed:", err);
+      return res.status(500).json({ message: "Failed to create payment order", detail: err?.message || String(err) });
+    }
+
+    await prisma.payments.update({
+      where: { id: paymentRecord.id },
+      data: { provider_order_id: razorpayOrder.id },
+    });
+
+    return res.json({ razorpayOrder, localOrderId: newOrder.id, paymentId: paymentRecord.id });
+  } catch (err: any) {
+    console.error("create order error", err);
+    return res.status(500).json({ error: err?.message || "Internal server error" });
+  }
+};
+
+// --- Validate order (client posted signature) ---
+const validateOrder = async (req: Request, res: Response) => {
+  console.log("entered ValidateOrder")
+  const userId = req.user?.id;
+  const { razorpay_payment_id, razorpay_order_id, razorpay_signature, paymentId, localOrderId,cartId } = req.body;
+
+  console.log(req.body)
+
+  if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+    console.log("missing field error ")
+    return res.status(400).json({ error: "Missing fields" });
+  }
+
+  try {
+    // idempotency: ensure payment record exists and not already captured
+    const paymentRec = await prisma.payments.findUnique({ where: { id: paymentId } });
+    if (!paymentRec){ console.log("Payment record not found")
+       return res.status(404).json({ error: "Payment record not found" })};
+    if (paymentRec.status === "CAPTURED") {
+      return res.json({ ok: true, message: "Payment already captured", orderId: localOrderId, paymentId: paymentRec.id });
+    }
+
+    // verify signature
+    const generated = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "")
+    generated.update(`${razorpay_order_id}|${razorpay_payment_id}`)
+    const digest = generated.digest("hex");
+    if (digest !== razorpay_signature) {
+      console.log("Invalid signature")
+      return res.status(400).json({ error: "Invalid signature" });
+    }
+
+    // (Optional) fetch payment from Razorpay server-side to confirm
+    const fetched = await razorpayClient.payments.fetch(razorpay_payment_id);
+
+
+    if (fetched.status !== "captured") {
+      console.log("Payment not captured")
+      return res.status(400).json({ error: "Payment not captured" });
+    }
+
+    console.log("Reached here before transaction")
+    // Update payment & order; then decrement stock + inventory transactions in an idempotent way
+    await prisma.$transaction(async (tx) => {
+      await tx.payments.update({
+        where: { id: paymentId },
+        data: { provider_payment_id: razorpay_payment_id, status: "CAPTURED", metadata: { verifiedBy: "client-handler", verifiedAt: new Date().toISOString() } },
+      });
+
+      await tx.orders.update({
+        where: { id: localOrderId },
+        data: { payment_status: "PAID", status: "CONFIRMED" },
+      });
+
+      // Fetch order items and decrement stock (idempotency: check inventory transaction/logging to avoid double decrement)
+      const order = await tx.orders.findUnique({ where: { id: localOrderId }, include: { items: true } });
+      if (order && order.items?.length) {
+        for (const item of order.items) {
+          // adjustStock expects the prisma tx when you want to be in same transaction
+          await adjustStock(item.product_id, -item.quantity, `Order #${localOrderId} paid`, userId || "", tx as typeof prisma);
+        }
+        if(cartId){
+          const whereClause: any = { id: cartId };
+          if (userId) whereClause.userId = userId;
+          await prisma.carts.update({
+            where: whereClause,
+            data: { items: { deleteMany: {} } },
+          });
+        }
+      }
+    });
+
+    return res.json({ ok: true, orderId: localOrderId, paymentId });
+  } catch (err: any) {
+    console.error("validate error", err);
+    return res.status(500).json({ error: err?.message || "Internal server error" });
+  }
+};
+
+// --- Webhook handler (authoritative) ---
+const webhookHandler = async (req: Request, res: Response) => {
+  try {
+    const signature = req.headers["x-razorpay-signature"] as string | undefined;
+    if (!signature) return res.status(400).send("Missing signature");
+
+    const secret = process.env.RAZORPAY_KEY_SECRET || "";
+    // req.body here must be raw body (Buffer/string). Many setups set it as Buffer in req.body
+    const raw = (req as any).rawBody ?? JSON.stringify(req.body);
+    const expected = crypto.createHmac("sha256", secret).update(raw).digest("hex");
+    if (expected !== signature) {
+      console.warn("Webhook signature mismatch");
+      return res.status(400).send("Invalid signature");
+    }
+
+    const event = req.body;
+    // handle payment.captured / payment.authorized
+    if (event?.event === "payment.captured" || event?.event === "payment.authorized") {
+      const payload = event.payload?.payment?.entity;
+      const razorpayPaymentId = payload?.id;
+      const razorpayOrderId = payload?.order_id;
+      const amount = payload?.amount;
+
+      const p = await prisma.payments.findFirst({ where: { provider_order_id: razorpayOrderId } });
+      if (!p) {
+        console.warn("No local payment record for", razorpayOrderId);
+        return res.status(200).send("ok");
+      }
+
+      if (p.status === "CAPTURED") {
+        return res.status(200).send("already handled");
+      }
+
+      await prisma.$transaction(async (tx) => {
+        await tx.payments.update({ where: { id: p.id }, data: { provider_payment_id: razorpayPaymentId, status: "CAPTURED", metadata: { webhook: event } } });
+        if (p.orderId) {
+          await tx.orders.update({ where: { id: p.orderId }, data: { payment_status: "PAID", status: "CONFIRMED" } });
+
+          // decrement stock (idempotency: ensure adjustStock handles duplicates or check inventory logs)
+          const order = await tx.orders.findUnique({ where: { id: p.orderId }, include: { items: true } });
+          if (order?.items?.length) {
+            for (const item of order.items) {
+              await adjustStock(item.product_id, -item.quantity, `Order #${p.orderId} paid (webhook)`, p?.cartId || "");
+            }
+          }
+        }
+      });
+    }
+
+    return res.status(200).send("ok");
+  } catch (err: any) {
+    console.error("webhook handler err", err);
+    return res.status(500).send("error");
+  }
+};
+
+
 // placing order through cart Id
 const placeOrderFromCart = async (req: Request, res: Response) => {
   const userId = req.user?.id;
@@ -148,7 +439,8 @@ const placeOrderFromCart = async (req: Request, res: Response) => {
 
   if (!cartId || (!address_id && !new_shipping_address)) {
     return res.status(400).json({
-      message: "Cart ID and either address_id or new_shipping_address are required",
+      message:
+        "Cart ID and either address_id or new_shipping_address are required",
     });
   }
 
@@ -211,7 +503,6 @@ const placeOrderFromCart = async (req: Request, res: Response) => {
           ship_state: address.state,
           ship_zip: address.postal_code,
           notes: null,
-
         },
       });
     }
@@ -242,7 +533,7 @@ const placeOrderFromCart = async (req: Request, res: Response) => {
         userId
       );
     }
-    
+
     // Clear the cart after placing the order
     await prisma.carts.update({
       where: { id: cartId, userId },
@@ -256,8 +547,7 @@ const placeOrderFromCart = async (req: Request, res: Response) => {
     console.error("Error placing order from cart:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-}
-
+};
 
 // Get user's orders (Customer only)
 const getUserOrders = async (req: Request, res: Response) => {
@@ -293,7 +583,7 @@ const getUserOrders = async (req: Request, res: Response) => {
       include: {
         items: true,
         shipping_address: true,
-        delivery: { include: { delivery_partner: true } }, 
+        delivery: { include: { delivery_partner: true } },
       },
       skip,
       take,
@@ -337,7 +627,7 @@ const getOrderDetails = async (req: Request, res: Response) => {
         items: true,
         shipping_address: true,
         delivery: { include: { delivery_partner: true } }, // <--- nested include
-              },
+      },
     });
 
     if (!order) {
@@ -568,5 +858,9 @@ export {
   updateOrderStatus,
   assignOrderToDelivery,
   deleteOrder,
-  placeOrderFromCart
+  placeOrderFromCart,
+  paymentPlaceOrder,
+  validateOrder,
+  webhookHandler,
+
 };

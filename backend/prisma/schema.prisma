@@ -155,6 +155,7 @@ model Orders {
   items            order_items[]
   delivery         Delivery?
 
+payments Payments[]  
   @@index([userId])
   @@index([status])
 }
@@ -269,3 +270,38 @@ model Delivery {
 
   @@index([delivery_partner_id])
 }
+
+enum PaymentProvider {
+  RAZORPAY
+}
+
+enum ProviderPaymentStatus {
+  CREATED    // razorpay order created but not paid
+  AUTHORIZED // optional (if provider flags)
+  CAPTURED   // payment captured (success)
+  FAILED
+  REFUNDED
+}
+
+model Payments {
+  id                String                @id @default(cuid())
+  orderId           String?               // can be null if payment created against cart before order
+  cartId            String?               // optional: created while cart->order flow
+  provider          PaymentProvider       @default(RAZORPAY)
+  provider_order_id String?               // e.g. razorpay order id
+  provider_payment_id String?             // e.g. razorpay payment id
+  receipt           String?               // receipt string sent to provider
+  amount            Int                   // store amount in paise (integer)
+  currency          String                @default("INR")
+  status            ProviderPaymentStatus @default(CREATED)
+  metadata          Json?                 // store notes/payload returned by provider
+  created_at        DateTime              @default(now())
+  updated_at        DateTime              @updatedAt
+
+  // Relations
+  order Orders? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  @@index([orderId])
+  @@index([cartId])
+  @@index([provider_order_id])
+}
+
