@@ -135,6 +135,23 @@ const getTotalNoOfOrdersByStatus = async (req: Request, res: Response) => {
   }
 };
 
+// model Delivery {
+//   id                  String         @id @default(cuid())
+//   order_id            String         @unique
+//   delivery_partner_id String
+//   status              DeliveryStatus @default(UNASSIGNED)
+//   assigned_at         DateTime       @default(now())
+//   last_update_at      DateTime       @updatedAt
+//   notes               String?
+
+//   // Relations
+//   order            Orders @relation(fields: [order_id], references: [id], onDelete: Cascade)
+//   delivery_partner User   @relation("DeliveryPartner", fields: [delivery_partner_id], references: [id], onDelete: Restrict)
+
+//   @@index([delivery_partner_id])
+// }
+
+
 // total pending deliveries
 const getTotalPendingDeliveriesByStatus = async (
   req: Request,
@@ -145,10 +162,15 @@ const getTotalPendingDeliveriesByStatus = async (
     return res.status(400).json({ message: "Status is required" });
   }
 
+  console.log("Total Deliveries");
+
+
   try {
-    const totalDeliveries = await prisma.delivery.count({
-      where: { status: status as DeliveryStatus },
+    const totalDeliveries = await prisma.orders.count({
+      where: { status: status as OrderStatus },
     });
+
+    console.log("Total Deliveries:", totalDeliveries);
 
     return res.status(200).json({ totalDeliveries });
   } catch (error) {

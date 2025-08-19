@@ -54,7 +54,7 @@ class AuthService {
   }
 
   async logout(): Promise<void> {
-    await axios.post(`/auth/logout`);
+    await axios.post(`/api/auth/logout`);
     this.currentUser = null;
     localStorage.removeItem('user');
     localStorage.removeItem('accessToken');

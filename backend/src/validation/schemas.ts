@@ -116,7 +116,7 @@ export const placeOrderFromCartSchema = z.object({
 }).refine(d => d.address_id || d.new_shipping_address, { message: "Either address_id or new_shipping_address required" });
 
 export const updateOrderStatusSchema = z.object({
-  status: z.enum(["PENDING","PROCESSING","SHIPPED","DELIVERED","CANCELLED"], { required_error: "status is required" })
+  status: z.enum(["PENDING","CONFIRMED","PROCESSING","SHIPPED","DELIVERED","CANCELLED"], { required_error: "status is required" })
 });
 export const assignOrderSchema = z.object({
   deliveryPartnerId: z.string().min(1, "deliveryPartnerId is required")
@@ -126,7 +126,7 @@ export const assignOrderSchema = z.object({
 export const listUserOrdersQuerySchema = z.object({
   page: z.coerce.number().int("page must be an integer").positive("page must be greater than 0").default(1).optional(),
   limit: z.coerce.number().int("limit must be an integer").positive("limit must be greater than 0").max(100, "limit must not exceed 100").default(10).optional(),
-  status: z.enum(["PENDING","PROCESSING","SHIPPED","DELIVERED","CANCELLED"]).optional()
+  status: z.enum(["PENDING","CONFIRMED","PROCESSING","SHIPPED","DELIVERED","CANCELLED"]).optional()
 });
 // Orders query (admin)
 export const listAllOrdersQuerySchema = listUserOrdersQuerySchema;
@@ -177,10 +177,10 @@ export const filterProductsQuerySchema = z.object({
 
 // Admin Analytics
 export const orderStatusQuerySchema = z.object({
-  status: z.enum(["PENDING","PROCESSING","SHIPPED","DELIVERED","CANCELLED"], { required_error: "status is required" })
+  status: z.enum(["PENDING","CONFIRMED","PROCESSING","SHIPPED","DELIVERED","CANCELLED"], { required_error: "status is required" })
 });
 export const deliveryStatusQuerySchema = z.object({
-  status: z.enum(["UNASSIGNED","ASSIGNED","OUT_FOR_DELIVERY","DELIVERED","FAILED"], { required_error: "status is required" })
+  status: z.enum(["PENDING","CONFIRMED","PROCESSING","SHIPPED","DELIVERED","CANCELLED"], { required_error: "status is required" })
 });
 export const topSellingProductsQuerySchema = z.object({
   limit: z.coerce.number().int("limit must be an integer").positive("limit must be greater than 0").max(100, "limit must not exceed 100").optional()

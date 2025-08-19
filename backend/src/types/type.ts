@@ -5,15 +5,15 @@ export type CloudinaryConfig = {
 };
 
 export type User = {
-  id: string;              
-  full_name: string;     
-  email: string;           
-  phone: string;           
-  password_hashed: string; 
-  role: string;            
-  is_active: boolean;       
-  created_at: Date;      
-  updated_at: Date;      
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  password_hashed: string;
+  role: string;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
 };
 
 export type GetAllProductsParams = {
@@ -33,8 +33,19 @@ export type GetAllProductsParams = {
 //   limit?: number;
 // };
 
-export type OrderStatus =   "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+export type OrderStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "PROCESSING"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "CANCELLED";
 
-export type Role =   "ADMIN" | "CUSTOMER" | "DELIVERY"
+export type Role = "ADMIN" | "CUSTOMER" | "DELIVERY";
 
-export type DeliveryStatus = "UNASSIGNED" | "ASSIGNED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "FAILED";
+export type DeliveryStatus =
+  | "UNASSIGNED"
+  | "ASSIGNED"
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "FAILED";

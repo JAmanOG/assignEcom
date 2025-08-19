@@ -9,6 +9,7 @@ interface ValidateOptions {
 }
 
 export function validate(schemas: ValidateOptions) {
+  console.log("Validation middleware triggered with schemas:", schemas);
   return (req: Request, res: Response, next: NextFunction) => {
     try {
         let parsedParams = { ...req.params };

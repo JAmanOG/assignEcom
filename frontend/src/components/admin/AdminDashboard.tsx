@@ -28,7 +28,7 @@ const fetchTotalOrders = async () =>
 const fetchTotalProducts = async () =>
   (await axios.get("/api/admin/products/total")).data;
 const getTotalPendingDeliveries = async () =>
-  (await axios.get("/api/admin/deliveries/total/status?status=UNASSIGNED")).data;
+  (await axios.get("/api/admin/deliveries/total/status?status=PENDING")).data;
 const getRecentOrders = async () =>
   (await axios.get("/api/admin/orders/recent")).data;
 const getTopCategories = async () =>
@@ -78,15 +78,18 @@ export function AdminDashboard() {
       ]})
       
       const [totalRevenue, totalOrders,  totalProducts, totalPendingDeliveries, RecentOrders, topCategories] = results;
+      console.log("Total pending deliveries:", totalPendingDeliveries.data.totalDeliveries);
 
       console.log("Admin Dashboard Data:", {
         totalRevenue: totalRevenue.data,
         totalOrders: totalOrders.data,
         totalProducts: totalProducts.data,
-        totalPendingDeliveries: totalPendingDeliveries.data,
+        totalPendingDeliveries: totalPendingDeliveries.data.totalDeliveries,
         recentOrders: RecentOrders.data,
         topCategories: topCategories.data
       });
+
+      console.log("Total Pending Deliveries:", totalPendingDeliveries);
 
   // Mock data - in real app, this would come from your API
   const stats = [
@@ -113,7 +116,7 @@ export function AdminDashboard() {
     },
     {
       title: 'Pending Deliveries (Unassigned)',
-      value: `${totalPendingDeliveries?.data?.totalPendingDeliveries || 0}`,
+      value: `${totalPendingDeliveries?.data?.totalDeliveries || 0}`,
       change: '-5',
       icon: Truck,
       color: 'text-warning'
@@ -226,7 +229,7 @@ export function AdminDashboard() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Order Completion Rate</span>
                 <span className="font-medium">
-                  {totalOrders?.data?.totalOrders ? `${((totalOrders?.data?.totalOrders - totalPendingDeliveries?.data?.totalPendingDeliveries) / totalOrders.data.totalOrders * 100).toFixed(2)}%` : '0%'}
+                  {totalOrders?.data?.totalOrders ? `${((totalOrders?.data?.totalOrders - totalPendingDeliveries?.data?.totalDeliveries) / totalOrders.data.totalOrders * 100).toFixed(2)}%` : '0%'}
                 </span>
               </div>
               <div className="w-full bg-muted rounded-full h-2">

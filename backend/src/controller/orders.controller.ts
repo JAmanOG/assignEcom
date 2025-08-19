@@ -395,6 +395,7 @@ const updateOrderStatus = async (req: Request, res: Response) => {
 
   const OrderStatusValues = [
     "PENDING",
+    "CONFIRMED",
     "PROCESSING",
     "SHIPPED",
     "DELIVERED",
