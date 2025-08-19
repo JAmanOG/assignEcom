@@ -79,6 +79,15 @@ export function AdminDashboard() {
       
       const [totalRevenue, totalOrders,  totalProducts, totalPendingDeliveries, RecentOrders, topCategories] = results;
 
+      console.log("Admin Dashboard Data:", {
+        totalRevenue: totalRevenue.data,
+        totalOrders: totalOrders.data,
+        totalProducts: totalProducts.data,
+        totalPendingDeliveries: totalPendingDeliveries.data,
+        recentOrders: RecentOrders.data,
+        topCategories: topCategories.data
+      });
+
   // Mock data - in real app, this would come from your API
   const stats = [
     {
@@ -114,13 +123,16 @@ export function AdminDashboard() {
   // normalize recent orders data
   const recentOrders = RecentOrders.data?.map((order: any) => ({
     id: order.id,
-    customer: order.user.full_name,
+    customer: order.user?.full_name,
     amount: order.items.reduce((sum: number, item: any) => sum + item.line_total, 0).toFixed(2),
-    status: order.delivery.status,
+    status: order?.status,
     date: order.placed_at
   })) || [];
 
+  console.log("Recent Orders:", recentOrders);
+
   const getStatusBadge = (status: string) => {
+    console.log("Status:", status);
     const variants: Record<string, string> = {
       pending: 'status-pending',
       processing: 'status-processing', 
@@ -131,7 +143,7 @@ export function AdminDashboard() {
     
     return (
       <Badge className={`${variants[status]} border`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {status?.charAt(0).toUpperCase() + status?.slice(1)}
       </Badge>
     );
   };
@@ -187,7 +199,7 @@ export function AdminDashboard() {
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">{order.id}</TableCell>
                     <TableCell>{order.customer}</TableCell>
-                    <TableCell>{getStatusBadge(order.status)}</TableCell>
+                    <TableCell>{getStatusBadge(order?.status)}</TableCell>
                     <TableCell>{order.amount}</TableCell>
                     <TableCell>
                       <Button variant="ghost" size="sm">
@@ -214,7 +226,7 @@ export function AdminDashboard() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Order Completion Rate</span>
                 <span className="font-medium">
-                  {totalOrders?.data?.totalOrders ? `${((totalOrders.data.totalOrders - totalPendingDeliveries.data.totalPendingDeliveries) / totalOrders.data.totalOrders * 100).toFixed(2)}%` : '0%'}
+                  {totalOrders?.data?.totalOrders ? `${((totalOrders?.data?.totalOrders - totalPendingDeliveries?.data?.totalPendingDeliveries) / totalOrders.data.totalOrders * 100).toFixed(2)}%` : '0%'}
                 </span>
               </div>
               <div className="w-full bg-muted rounded-full h-2">
