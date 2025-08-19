@@ -78,18 +78,6 @@ export function AdminDashboard() {
       ]})
       
       const [totalRevenue, totalOrders,  totalProducts, totalPendingDeliveries, RecentOrders, topCategories] = results;
-      console.log("Total pending deliveries:", totalPendingDeliveries.data.totalDeliveries);
-
-      console.log("Admin Dashboard Data:", {
-        totalRevenue: totalRevenue.data,
-        totalOrders: totalOrders.data,
-        totalProducts: totalProducts.data,
-        totalPendingDeliveries: totalPendingDeliveries.data.totalDeliveries,
-        recentOrders: RecentOrders.data,
-        topCategories: topCategories.data
-      });
-
-      console.log("Total Pending Deliveries:", totalPendingDeliveries);
 
   // Mock data - in real app, this would come from your API
   const stats = [
@@ -132,10 +120,10 @@ export function AdminDashboard() {
     date: order.placed_at
   })) || [];
 
-  console.log("Recent Orders:", recentOrders);
+  // console.log("Recent Orders:", recentOrders);
 
   const getStatusBadge = (status: string) => {
-    console.log("Status:", status);
+    // console.log("Status:", status);
     const variants: Record<string, string> = {
       pending: 'status-pending',
       processing: 'status-processing', 
