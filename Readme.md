@@ -6,7 +6,7 @@ A monorepo containing a TypeScript / Node.js (Express 5) backend and a React 19 
 
 ⚠️ **Note:** The server may respond slowly due to the limitations of Render.com's free tier. Thank you for your patience.
 
-* 🔗 [Live Demo](https://assign-ecom.vercel.app/shop)
+* 🔗 [Live Demo](https://assign-ecom.vercel.app)
 * 🔗 [Backend API Testing & Documentation](https://assignecom.onrender.com/api-docs/)
 
 ## 1. Features (Current)
